@@ -15,6 +15,9 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, SelectField, HiddenField, TextAreaField
 from tenacity import retry, stop_after_attempt, wait_random_exponential, wait_exponential
 from openai import OpenAI
+from flask_wtf import FlaskForm
+from wtforms import StringField, HiddenField, IntegerField, TextAreaField, SubmitField, SelectField
+from wtforms.validators import DataRequired, NumberRange
 
 # Set up logging
 log_directory = "logs"
@@ -34,7 +37,7 @@ class PlaylistForm(FlaskForm):
     mood = HiddenField('Current Mood')
     desired_mood = HiddenField('Desired Mood')
     activity = StringField('Activity')
-    energy_level = SelectField('Energy Level', choices=[('Low', 'Low'), ('Medium', 'Medium'), ('High', 'High')])
+    energy_level = IntegerField('Energy Level', validators=[DataRequired(), NumberRange(min=0, max=100)])
     time_of_day = SelectField('Time of Day', choices=[('Morning', 'Morning'), ('Afternoon', 'Afternoon'), ('Evening', 'Evening'), ('Night', 'Night')])
     duration = StringField('Duration')
     discovery_level = StringField('Discovery Level')
