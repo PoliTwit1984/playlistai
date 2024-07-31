@@ -15,6 +15,7 @@ from helpers import (
 load_dotenv()
 
 app = Flask(__name__)
+app.config['DEBUG'] = True
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 app.config['SESSION_TYPE'] = 'filesystem'
 app.config['SESSION_FILE_DIR'] = './.flask_session/'
@@ -45,19 +46,29 @@ def get_spotify_client():
 
 @app.route('/')
 def index():
+    app.logger.debug("Index route called")
     sp = get_spotify_client()
     if sp:
         try:
+            app.logger.debug("Attempting to get user profile")
             user_profile = sp.me()
-        except spotipy.exceptions.SpotifyException:
+            app.logger.debug(f"User profile retrieved: {user_profile}")
+        except spotipy.exceptions.SpotifyException as e:
+            app.logger.error(f"SpotifyException: {str(e)}")
             user_profile = None
-        return render_template('index.html', user=user_profile)
-    return render_template('index.html', user=None)
+        app.logger.debug(f"Rendering template with user: {user_profile}")
+    else:
+        app.logger.debug("No Spotify client available")
+        user_profile = None
 
-@app.route('/login')
-def login():
-    auth_url = sp_oauth.get_authorize_url()
-    return redirect(auth_url)
+    app.logger.debug(f"Template directory: {app.template_folder}")
+    app.logger.debug(f"Available templates: {os.listdir(app.template_folder)}")
+
+    try:
+        return render_template('index.html', user=user_profile)
+    except Exception as e:
+        app.logger.error(f"Error rendering template: {str(e)}")
+        return f"Error: {str(e)}", 500
 
 @app.route('/redirect')
 def redirect_page():
@@ -65,6 +76,11 @@ def redirect_page():
     token_info = sp_oauth.get_access_token(code)
     session['token_info'] = token_info
     return redirect(url_for('initial_form'))
+
+@app.route('/login')
+def login():
+    auth_url = sp_oauth.get_authorize_url()
+    return redirect(auth_url)
 
 @app.route('/initial_form', methods=['GET', 'POST'])
 def initial_form():
