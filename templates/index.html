@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-5">
+    <h1 class="text-center mb-4">Welcome to MoodWave</h1>
+    
+    {% if user %}
+        <p>Welcome back, {{ user.display_name }}!</p>
+        <a href="{{ url_for('initial_form') }}" class="btn btn-primary btn-lg">Create a Playlist</a>
+    {% else %}
+        <p>Please log in with Spotify to create your personalized playlist.</p>
+        <a href="{{ url_for('login') }}" class="btn btn-success btn-lg">Log in with Spotify</a>
+    {% endif %}
+</div>
+{% endblock %}

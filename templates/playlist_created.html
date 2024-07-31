@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-5">
+    <h2 class="text-center mb-4">Playlist Created Successfully!</h2>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="text-center">
+        <h3>Playlist Details:</h3>
+        <p>Name: {{ playlist.name }}</p>
+        <p>Number of Tracks: {{ num_tracks }}</p>
+        <p>Description: {{ playlist.description }}</p>
+        <a href="{{ playlist.external_urls.spotify }}" target="_blank" class="btn btn-success">Open in Spotify</a>
+    </div>
+
+    <div class="text-center mt-4">
+        <a href="{{ url_for('form') }}" class="btn btn-primary">Create Another Playlist</a>
+    </div>
+</div>
+{% endblock %}

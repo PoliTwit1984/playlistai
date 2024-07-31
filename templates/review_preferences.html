@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-5">
+    <h1 class="text-center mb-4">Review Your Preferences</h1>
+
+    <h2>Playlist Preferences</h2>
+    <ul>
+        <li>Activity: {{ form_data.activity }}</li>
+        <li>Energy Level: {{ form_data.energy_level }}</li>
+        <li>Time of Day: {{ form_data.time_of_day }}</li>
+        <li>Duration: {{ form_data.duration }} minutes</li>
+        <li>Discovery Level: {{ form_data.discovery_level }}%</li>
+        <li>Description: {{ form_data.playlist_description }}</li>
+    </ul>
+
+    <h2>Your Spotify Insights</h2>
+    <div class="row">
+        <div class="col-md-6">
+            <h3>Favorite Artists</h3>
+            <ul>
+                {% for artist in favorite_artists %}
+                    <li>{{ artist.name }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        <div class="col-md-6">
+            <h3>Favorite Genres</h3>
+            <ul>
+                {% for genre in favorite_genres %}
+                    <li>{{ genre.name }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    <h2>User Profile</h2>
+    <p>Name: {{ user_profile.display_name }}</p>
+    <p>Email: {{ user_profile.email }}</p>
+
+    <form method="POST" action="{{ url_for('review_preferences') }}">
+        <button type="submit" class="btn btn-primary btn-block mt-4">Find Tracks</button>
+    </form>
+</div>
+{% endblock %}

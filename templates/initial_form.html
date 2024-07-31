@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-5">
+    <h1 class="text-center mb-4">Create Your Mood Playlist</h1>
+    
+    <form method="POST" action="{{ url_for('initial_form') }}">
+        {{ form.hidden_tag() }}
+        
+        <div class="form-group">
+            {{ form.activity.label }}
+            {{ form.activity(class="form-control") }}
+        </div>
+        
+        <div class="form-group">
+            {{ form.energy_level.label }}
+            {{ form.energy_level(class="form-control") }}
+        </div>
+        
+        <div class="form-group">
+            {{ form.time_of_day.label }}
+            {{ form.time_of_day(class="form-control") }}
+        </div>
+        
+        <div class="form-group">
+            {{ form.duration.label }}
+            {{ form.duration(class="form-control", placeholder="Enter duration in minutes") }}
+        </div>
+        
+        <div class="form-group">
+            <label for="current-mood">Current Mood</label>
+            <div id="current-mood-slider"></div>
+            {{ form.mood(type="hidden", id="current-mood-input") }}
+        </div>
+        
+        <div class="form-group">
+            <label for="desired-mood">Desired Mood</label>
+            <div id="desired-mood-slider"></div>
+            {{ form.desired_mood(type="hidden", id="desired-mood-input") }}
+        </div>
+        
+        <div class="form-group">
+            {{ form.discovery_level.label }}
+            {{ form.discovery_level(class="form-control", type="range", min="0", max="100", step="1") }}
+            <small class="form-text text-muted">0 = Only familiar tracks, 100 = Maximum discovery</small>
+        </div>
+        
+        <div class="form-group">
+            {{ form.favorite_artists.label(class="form-label") }}
+            {{ form.favorite_artists(class="form-control", id="favorite_artists", placeholder="Enter your favorite artists") }}
+        </div>
+        
+        <div class="form-group">
+            {{ form.favorite_genres.label(class="form-label") }}
+            {{ form.favorite_genres(class="form-control", id="favorite_genres", placeholder="Enter your favorite genres") }}
+        </div>
+        
+        <div class="form-group">
+            {{ form.playlist_description.label }}
+            {{ form.playlist_description(class="form-control", rows="4", placeholder="Tell us more about the mood, occasion, or story behind your desired playlist...") }}
+        </div>
+        
+        {{ form.submit(class="btn btn-primary") }}
+    </form>
+</div>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/14.6.3/nouislider.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tagify/4.17.7/tagify.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/14.6.3/nouislider.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tagify/4.17.7/tagify.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize mood sliders
+    function createMoodSlider(elementId, inputId) {
+        var slider = document.getElementById(elementId);
+        noUiSlider.create(slider, {
+            start: 50,
+            connect: 'lower',
+            range: {
+                'min': 0,
+                'max': 100
+            }
+        });
+
+        slider.noUiSlider.on('update', function (values, handle) {
+            document.getElementById(inputId).value = Math.round(values[handle]);
+        });
+    }
+
+    createMoodSlider("current-mood-slider", "current-mood-input");
+    createMoodSlider("desired-mood-slider", "desired-mood-input");
+
+    // Initialize Tagify for artists and genres
+    var artistsTagify = new Tagify(document.getElementById('favorite_artists'), {
+        whitelist: [],
+        maxTags: 10,
+        dropdown: {
+            maxItems: 20,
+            classname: "tags-look",
+            enabled: 0,
+            closeOnSelect: false
+        }
+    });
+
+    var genresTagify = new Tagify(document.getElementById('favorite_genres'), {
+        whitelist: [],
+        maxTags: 10,
+        dropdown: {
+            maxItems: 20,
+            classname: "tags-look",
+            enabled: 0,
+            closeOnSelect: false
+        }
+    });
+
+    // Autocomplete for artists
+    artistsTagify.on('input', function(e) {
+        var value = e.detail.value;
+        artistsTagify.settings.whitelist.length = 0; // reset the whitelist
+
+        // show loading animation and hide the suggestions dropdown
+        artistsTagify.loading(true).dropdown.hide();
+
+        fetch('/autocomplete_artist?q=' + encodeURIComponent(value))
+            .then(response => response.json())
+            .then(data => {
+                artistsTagify.settings.whitelist = data.map(item => item.name);
+                artistsTagify.loading(false).dropdown.show(value);
+            });
+    });
+
+    // Autocomplete for genres
+    genresTagify.on('input', function(e) {
+        var value = e.detail.value;
+        genresTagify.settings.whitelist.length = 0; // reset the whitelist
+
+        // show loading animation and hide the suggestions dropdown
+        genresTagify.loading(true).dropdown.hide();
+
+        fetch('/autocomplete_genre?q=' + encodeURIComponent(value))
+            .then(response => response.json())
+            .then(data => {
+                genresTagify.settings.whitelist = data.map(item => item.name);
+                genresTagify.loading(false).dropdown.show(value);
+            });
+    });
+});
+</script>
+{% endblock %}

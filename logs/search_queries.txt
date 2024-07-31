@@ -1,0 +1,47 @@
+Spotify Search Queries:
+
+Searching - Track: 'Just the Way You Are', Artist: 'Bruno Mars'
+FOUND - Track: 'Just the Way You Are', Artist: 'Bruno Mars', ID: 7BqBn9nzAq8spo5e7cZ0dJ
+
+Searching - Track: 'Lovely Day', Artist: 'Bill Withers'
+FOUND - Track: 'Lovely Day', Artist: 'Bill Withers', ID: 0bRXwKfigvpKZUurwqAlEh
+
+Searching - Track: 'Put Your Records On', Artist: 'Corinne Bailey Rae'
+FOUND - Track: 'Put Your Records On', Artist: 'Corinne Bailey Rae', ID: 2nGFzvICaeEWjIrBrL2RAx
+
+Searching - Track: 'Banana Pancakes', Artist: 'Jack Johnson'
+FOUND - Track: 'Banana Pancakes', Artist: 'Jack Johnson', ID: 451GvHwY99NKV4zdKPRWmv
+
+Searching - Track: 'Malibu', Artist: 'Miley Cyrus'
+FOUND - Track: 'Malibu', Artist: 'Miley Cyrus', ID: 1UZOjK1BwmwWU14Erba9CZ
+
+Searching - Track: 'Come Away With Me', Artist: 'Norah Jones'
+FOUND - Track: 'Come Away With Me', Artist: 'Norah Jones', ID: 6jGnykaS6TkWp15utXSAeI
+
+Searching - Track: 'Better Days', Artist: 'Dermot Kennedy'
+FOUND - Track: 'Better Days', Artist: 'Dermot Kennedy', ID: 0B6hW0mGwtejHAWuJ0qMka
+
+Searching - Track: 'Stay', Artist: 'Alessia Cara'
+FOUND - Track: 'Stay', Artist: 'Zedd', ID: 6uBhi9gBXWjanegOb2Phh0
+
+Searching - Track: 'Accelerate', Artist: 'Christina Aguilera feat. Ty Dolla $ign'
+FOUND - Track: 'Accelerate (feat. Ty Dolla $ign & 2 Chainz)', Artist: 'Christina Aguilera', ID: 0iSDDumvHTzv6we9Yr1HzY
+
+Searching - Track: 'Dancing in the Moonlight', Artist: 'Toploader'
+FOUND - Track: 'Dancing in the Moonlight', Artist: 'Toploader', ID: 3Fzlg5r1IjhLk2qRw667od
+
+Searching - Track: 'Budapest', Artist: 'George Ezra'
+FOUND - Track: 'Budapest', Artist: 'George Ezra', ID: 2ixsaeFioXJmMgkkbd4uj1
+
+Searching - Track: 'Suddenly I See', Artist: 'KT Tunstall'
+FOUND - Track: 'Suddenly I See', Artist: 'KT Tunstall', ID: 5p9XWUdvbUzmPCukOmwoU3
+
+Searching - Track: 'Happy', Artist: 'Pharrell Williams'
+FOUND - Track: 'Happy - From "Despicable Me 2"', Artist: 'Pharrell Williams', ID: 60nZcImufyMA1MKQY3dcCH
+
+Searching - Track: 'Rather Be', Artist: 'Clean Bandit feat. Jess Glynne'
+FOUND - Track: 'Rather Be (feat. Jess Glynne)', Artist: 'Clean Bandit', ID: 0am001WwFBVGDGLwRh3ixi
+
+Searching - Track: 'Brave', Artist: 'Sara Bareilles'
+FOUND - Track: 'Brave', Artist: 'Sara Bareilles', ID: 6Uy6K3KdmUdAfelUp0SeXn
+

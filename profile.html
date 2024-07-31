@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>User Profile</title>
+  </head>
+  <body>
+    <h1>Welcome, {{ user_info['display_name'] }}</h1>
+    <p>Email: {{ user_info['email'] }}</p>
+    <h2>Your Playlists</h2>
+    <ul>
+      {% for playlist in playlists['items'] %}
+      <li>{{ playlist['name'] }}</li>
+      {% endfor %}
+    </ul>
+    <h2>Autocomplete Genre</h2>
+    <form action="{{ url_for('autocomplete_genre') }}" method="get">
+      <input type="text" name="q" placeholder="Enter genre" />
+      <button type="submit">Search</button>
+    </form>
+  </body>
+</html>
