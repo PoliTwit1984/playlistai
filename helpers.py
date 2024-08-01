@@ -45,6 +45,80 @@ class PlaylistForm(FlaskForm):
     favorite_genres = StringField('Favorite Genres')
     playlist_description = TextAreaField('Playlist Description')
     submit = SubmitField('Generate Playlist')
+    
+import random
+from datetime import datetime, timedelta
+
+def get_playlist_picks(sp, limit=10, max_playlist_age_days=365):
+    """
+    Retrieve tracks from the user's less frequently listened to playlists.
+    
+    :param sp: Spotify client object
+    :param limit: Number of tracks to return
+    :param max_playlist_age_days: Maximum age of playlists to consider
+    :return: List of track picks from various playlists
+    """
+    playlist_picks = []
+    playlists = sp.current_user_playlists(limit=50)['items']
+    
+    # Filter and sort playlists
+    filtered_playlists = []
+    for playlist in playlists:
+        # Skip playlists that are too new
+        if playlist['tracks']['total'] == 0:
+            continue
+        
+        playlist_tracks = sp.playlist_tracks(playlist['id'], fields='items.added_at', limit=1)
+        if playlist_tracks['items']:
+            added_at = datetime.strptime(playlist_tracks['items'][0]['added_at'], "%Y-%m-%dT%H:%M:%SZ")
+            if (datetime.utcnow() - added_at) <= timedelta(days=max_playlist_age_days):
+                filtered_playlists.append({
+                    'id': playlist['id'],
+                    'name': playlist['name'],
+                    'tracks_total': playlist['tracks']['total']
+                })
+    
+    # Sort playlists by number of tracks (ascending) to favor less populated playlists
+    filtered_playlists.sort(key=lambda x: x['tracks_total'])
+    
+    # Get tracks from playlists
+    for playlist in filtered_playlists:
+        if len(playlist_picks) >= limit:
+            break
+        
+        offset = random.randint(0, max(0, playlist['tracks_total'] - 1))
+        tracks = sp.playlist_tracks(playlist['id'], limit=1, offset=offset)
+        
+        if tracks['items']:
+            track = tracks['items'][0]['track']
+            # Ensure the track has a preview URL
+            if track['preview_url']:
+                playlist_picks.append({
+                    'id': track['id'],
+                    'name': track['name'],
+                    'artists': [artist['name'] for artist in track['artists']],
+                    'preview_url': track['preview_url'],
+                    'playlist_name': playlist['name']
+                })
+    
+    # If we don't have enough tracks, fill with random tracks from all playlists
+    while len(playlist_picks) < limit and playlists:
+        playlist = random.choice(playlists)
+        offset = random.randint(0, max(0, playlist['tracks']['total'] - 1))
+        tracks = sp.playlist_tracks(playlist['id'], limit=1, offset=offset)
+        
+        if tracks['items']:
+            track = tracks['items'][0]['track']
+            if track['preview_url'] and not any(pick['id'] == track['id'] for pick in playlist_picks):
+                playlist_picks.append({
+                    'id': track['id'],
+                    'name': track['name'],
+                    'artists': [artist['name'] for artist in track['artists']],
+                    'preview_url': track['preview_url'],
+                    'playlist_name': playlist['name']
+                })
+    
+    return playlist_picks
 
 @retry(wait=wait_exponential(multiplier=1, min=4, max=60), stop=stop_after_attempt(5))
 def make_spotify_request_with_retry(sp, method, *args, **kwargs):
@@ -330,3 +404,65 @@ def find_tracks_on_spotify(sp, recommended_tracks):
 
     logger.info(f"Total tracks found: {len(selected_tracks)}")
     return selected_tracks
+
+from datetime import datetime, timedelta
+import random
+
+def get_wayback_tracks(sp, limit=5, max_recent_tracks=200, max_saved_tracks=500):
+    """
+    Retrieve tracks from the user's library that haven't been played recently.
+    
+    :param sp: Spotify client object
+    :param limit: Number of "way back" tracks to return
+    :param max_recent_tracks: Maximum number of recent tracks to fetch
+    :param max_saved_tracks: Maximum number of saved tracks to fetch
+    :return: List of "way back" tracks
+    """
+    # Get recently played tracks
+    recent_tracks = []
+    results = sp.current_user_recently_played(limit=50)
+    while results['items'] and len(recent_tracks) < max_recent_tracks:
+        recent_tracks.extend(results['items'])
+        if results['next']:
+            results = sp.next(results)
+        else:
+            break
+
+    # Create a set of recently played track IDs
+    recent_track_ids = {item['track']['id'] for item in recent_tracks}
+
+    # Get user's saved tracks
+    saved_tracks = []
+    results = sp.current_user_saved_tracks(limit=50)
+    while results['items'] and len(saved_tracks) < max_saved_tracks:
+        saved_tracks.extend(results['items'])
+        if results['next']:
+            results = sp.next(results)
+        else:
+            break
+
+    # Find tracks that are saved but not recently played
+    wayback_candidates = [
+        track for track in saved_tracks
+        if track['track']['id'] not in recent_track_ids
+    ]
+
+    # Sort by date added (oldest first)
+    wayback_candidates.sort(key=lambda x: x['added_at'])
+
+    # Select a mix of old and relatively recent tracks
+    num_old = min(limit // 2, len(wayback_candidates))
+    num_recent = min(limit - num_old, len(wayback_candidates) - num_old)
+
+    old_tracks = wayback_candidates[:num_old]
+    recent_tracks = random.sample(wayback_candidates[num_old:], num_recent)
+
+    wayback_tracks = old_tracks + recent_tracks
+    random.shuffle(wayback_tracks)  # Shuffle to mix old and recent
+
+    # Enrich track information
+    for track in wayback_tracks:
+        track['added_at_formatted'] = datetime.strptime(track['added_at'], "%Y-%m-%dT%H:%M:%SZ").strftime("%B %d, %Y")
+        # You could add more track features here if needed
+
+    return wayback_tracks[:limit]

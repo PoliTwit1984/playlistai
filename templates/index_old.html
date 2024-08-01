@@ -29,8 +29,39 @@
             color: #333;
             font-size: 14px;
         }
+        .wave-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            overflow: hidden;
+        }
+        .wave {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 200%;
+    height: 100%;
+    background: url('data:image/svg+xml;utf8,<svg viewBox="0 0 1440 320" xmlns="http://www.w3.org/2000/svg"><path fill="%234a69bd" fill-opacity="0.1" d="M0,192L48,197.3C96,203,192,213,288,229.3C384,245,480,267,576,250.7C672,235,768,181,864,181.3C960,181,1056,235,1152,234.7C1248,235,1344,181,1392,154.7L1440,128L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>') repeat-x;
+    animation: wave 10s linear infinite;
+    transform: translateY(-50%);
+    z-index: -1; /* Ensures the wave is behind other elements */
+}
 
-        
+.header, .container, .hero-section, .features-section, .button-container {
+    position: relative; /* Ensures z-index works */
+    z-index: 1; /* Added z-index to each */
+}
+        @keyframes wave {
+            0% {
+                transform: translateX(0) translateY(-50%);
+            }
+            100% {
+                transform: translateX(-50%) translateY(-50%);
+            }
+        }
         .container {
             max-width: 600px;
             margin: 2rem auto;
@@ -153,74 +184,7 @@
     <div class="container">
         <h1>Tell us some stuff about you</h1>
         
-        <form method="POST">
-            {{ form.hidden_tag() }}
-            
-            <div class="form-group">
-                <label for="{{ form.activity.id }}">What are you up to?</label>
-                {{ form.activity(placeholder="e.g., Studying, Workout, Relaxing") }}
-            </div>
         
-            <div class="form-group">
-                <label for="{{ form.energy_level.id }}">Energy Level</label>
-                <div class="slider-container">
-                    {{ form.energy_level(type="range", min="0", max="100", value="50", class="slider", id="energy-level-slider") }}
-                    <span class="slider-value" id="energy-level-value">50</span>
-                </div>
-            </div>
-        
-            <div class="form-group">
-                <label for="{{ form.mood.id }}">Current Mood</label>
-                <div class="slider-container">
-                    {{ form.mood(type="range", min="0", max="100", value="50", class="slider", id="current-mood-slider") }}
-                    <span class="slider-value" id="current-mood-value">50</span>
-                </div>
-            </div>
-        
-            <div class="form-group">
-                <label for="{{ form.desired_mood.id }}">Desired Mood</label>
-                <div class="slider-container">
-                    {{ form.desired_mood(type="range", min="0", max="100", value="50", class="slider", id="desired-mood-slider") }}
-                    <span class="slider-value" id="desired-mood-value">50</span>
-                </div>
-            </div>
-        
-            <div class="form-group">
-                <label for="{{ form.discovery_level.id }}">Discovery Level</label>
-                <div class="slider-container">
-                    {{ form.discovery_level(type="range", min="0", max="100", value="50", class="slider", id="discovery-level-slider") }}
-                    <span class="slider-value" id="discovery-level-value">50</span>
-                </div>
-            </div>
-        
-            <div class="form-group">
-                <label for="{{ form.time_of_day.id }}">Time of Day</label>
-                {{ form.time_of_day(class="select", id="time-of-day-select") }}
-            </div>
-        
-            <div class="form-group">
-                <label for="{{ form.duration.id }}">Number of Songs</label>
-                {{ form.duration(type="number", min="1", placeholder="Enter number of songs") }}
-            </div>
-        
-            <div class="form-group">
-                <label for="{{ form.favorite_artists.id }}">Who are your favorite artists?</label>
-                {{ form.favorite_artists(placeholder="Enter your favorite artists") }}
-            </div>
-        
-            <div class="form-group">
-                <label for="{{ form.favorite_genres.id }}">What genres do you love?</label>
-                {{ form.favorite_genres(placeholder="Enter your favorite genres") }}
-            </div>
-        
-            <div class="form-group">
-                <label for="{{ form.playlist_description.id }}">Tell us your playlist vibe</label>
-                {{ form.playlist_description(rows="4", placeholder="Describe the mood, occasion, or story behind your desired playlist...") }}
-            </div>
-        
-            {{ form.submit(value="Next", class="btn-next") }}
-        </form>
-    
         <script>
             document.addEventListener('DOMContentLoaded', function() {
                 const sliders = document.querySelectorAll('.slider');

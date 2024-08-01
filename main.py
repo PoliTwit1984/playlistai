@@ -6,10 +6,12 @@ from openai import OpenAI
 import os
 import spotipy
 
+
 from helpers import (
     PlaylistForm, get_user_profile, get_user_top_artists, get_user_top_genres,
     get_expanded_track_pool, parse_openai_response, find_tracks_on_spotify,
-    make_spotify_request_with_retry, logger, get_openai_recommendations
+    make_spotify_request_with_retry, logger, get_openai_recommendations, PlaylistForm, 
+    get_wayback_tracks, get_playlist_picks
 )
 # Load environment variables and configure app (as before)
 load_dotenv()
@@ -31,17 +33,27 @@ sp_oauth = SpotifyOAuth(
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 def get_spotify_client():
+    app.logger.debug("Entering get_spotify_client function")
     token_info = session.get('token_info', None)
+    
     if not token_info:
-        logger.error("No token info found in session")
+        app.logger.error("No token info found in session")
         return None
 
+    app.logger.debug(f"Token info found: {token_info}")
+
     if sp_oauth.is_token_expired(token_info):
-        token_info = sp_oauth.refresh_access_token(token_info['refresh_token'])
-        session['token_info'] = token_info
-        logger.debug("Token refreshed: %s", token_info)
+        app.logger.debug("Token is expired, attempting to refresh")
+        try:
+            token_info = sp_oauth.refresh_access_token(token_info['refresh_token'])
+            session['token_info'] = token_info
+            app.logger.debug("Token refreshed successfully")
+        except Exception as e:
+            app.logger.error(f"Error refreshing token: {str(e)}")
+            return None
 
     access_token = token_info['access_token']
+    app.logger.debug("Spotify client created successfully")
     return spotipy.Spotify(auth=access_token)
 
 @app.route('/')
@@ -79,31 +91,55 @@ def redirect_page():
 
 @app.route('/login')
 def login():
+    app.logger.debug("Login route called")
     auth_url = sp_oauth.get_authorize_url()
+    app.logger.debug(f"Generated auth URL: {auth_url}")
     return redirect(auth_url)
 
 @app.route('/initial_form', methods=['GET', 'POST'])
 def initial_form():
+    app.logger.debug("Entering initial_form function")
+    
+    sp = get_spotify_client()
+    if not sp:
+        app.logger.warning("No Spotify client available in initial_form, redirecting to login")
+        flash('Please log in with Spotify to continue.', 'warning')
+        return redirect(url_for('login'))
+    
     form = PlaylistForm()
-    if request.method == 'POST' and form.validate_on_submit():
-        session['form_data'] = {
-            'name': form.name.data,
-            'mood': form.mood.data if form.mood.data else 50,
-            'desired_mood': form.desired_mood.data if form.desired_mood.data else 50,
-            'activity': form.activity.data,
-            'energy_level': form.energy_level.data,
-            'time_of_day': form.time_of_day.data,
-            'duration': form.duration.data,
-            'discovery_level': form.discovery_level.data,
-            'favorite_artists': form.favorite_artists.data,
-            'favorite_genres': form.favorite_genres.data,
-            'playlist_description': form.playlist_description.data
-        }
-        return redirect(url_for('load_user_preferences'))
+    app.logger.debug("PlaylistForm created")
+
+    if request.method == 'POST':
+        app.logger.debug("POST request received in initial_form")
+        if form.validate_on_submit():
+            app.logger.debug("Form submitted and validated")
+            try:
+                # Process form data
+                session['form_data'] = {
+                    'name': form.name.data,
+                    'mood': form.mood.data,
+                    'desired_mood': form.desired_mood.data,
+                    'activity': form.activity.data,
+                    'energy_level': form.energy_level.data,
+                    'time_of_day': form.time_of_day.data,
+                    'duration': form.duration.data,
+                    'discovery_level': form.discovery_level.data,
+                    'favorite_artists': form.favorite_artists.data,
+                    'favorite_genres': form.favorite_genres.data,
+                    'playlist_description': form.playlist_description.data
+                }
+                app.logger.debug(f"Form data saved to session: {session['form_data']}")
+                app.logger.info("Redirecting to load_user_preferences")
+                return redirect(url_for('load_user_preferences'))
+            except Exception as e:
+                app.logger.error(f"Error processing form data: {str(e)}", exc_info=True)
+                flash('An error occurred while processing your form. Please try again.', 'danger')
+        else:
+            app.logger.warning(f"Form validation failed. Errors: {form.errors}")
+            flash('Please correct the errors in the form and try again.', 'danger')
+    
+    app.logger.debug("Rendering initial form template")
     return render_template('initial_form.html', form=form)
-
-
-
 @app.route('/save_playlist', methods=['POST'])
 def save_playlist():
     sp = get_spotify_client()
@@ -144,51 +180,54 @@ def save_playlist():
 
 @app.route('/sign_out')
 def sign_out():
+    app.logger.debug("Sign out route called")
     session.clear()
-    flash('You have been successfully signed out.', 'success')
+    app.logger.info("Session cleared")
     return redirect(url_for('index'))
 
 @app.route('/load_user_preferences', methods=['GET'])
 def load_user_preferences():
-    sp = get_spotify_client()
-    if not sp:
-        flash('Unable to authenticate with Spotify', 'danger')
-        return redirect(url_for('index'))
+    app.logger.debug("Entering load_user_preferences function")
+    
+    try:
+        sp = get_spotify_client()
+        if not sp:
+            app.logger.error("Unable to get Spotify client, redirecting to initial_form")
+            flash('Unable to authenticate with Spotify. Please try logging in again.', 'danger')
+            return redirect(url_for('initial_form'))
 
-    user_profile = get_user_profile(sp)
-    favorite_artists = get_user_top_artists(sp)
-    favorite_genres = get_user_top_genres(sp)
+        # Get user profile
+        user_profile = get_user_profile(sp)
+        
+        # Get top artists and genres
+        top_artists = get_user_top_artists(sp, limit=10)
+        top_genres = get_user_top_genres(sp, limit=10)
+        
+        # Get recently played tracks
+        recent_tracks = sp.current_user_recently_played(limit=20)['items']
+        
+        # Get "Way Back Machine" tracks
+        wayback_tracks = get_wayback_tracks(sp, limit=10)
+        
+        # Get Playlist Picks
+        playlist_picks = get_playlist_picks(sp, limit=10)
+        
+        # Get form data from session
+        form_data = session.get('form_data', {})
+        
+        return render_template('user_preferences.html',
+                               user_profile=user_profile,
+                               top_artists=top_artists,
+                               top_genres=top_genres,
+                               recent_tracks=recent_tracks,
+                               wayback_tracks=wayback_tracks,
+                               playlist_picks=playlist_picks,
+                               form_data=form_data)
+    except Exception as e:
+        app.logger.error(f"Error in load_user_preferences: {str(e)}", exc_info=True)
+        flash('An error occurred while loading your preferences. Please try again.', 'danger')
+        return redirect(url_for('initial_form'))
 
-    session['user_profile'] = user_profile
-    session['favorite_artists'] = favorite_artists
-    session['favorite_genres'] = favorite_genres
-
-    return render_template('user_preferences.html',
-                           user_profile=user_profile,
-                           favorite_artists=favorite_artists,
-                           favorite_genres=favorite_genres)
-
-
-
-
-@app.route('/review_preferences', methods=['GET', 'POST'])
-def review_preferences():
-    if request.method == 'POST':
-        # Process any adjustments made by the user
-        # For now, we'll just pass the data as-is
-        return redirect(url_for('find_tracks'))
-
-    # Retrieve data from the session
-    form_data = session.get('form_data', {})
-    user_profile = session.get('user_profile', {})
-    favorite_artists = session.get('favorite_artists', [])
-    favorite_genres = session.get('favorite_genres', [])
-
-    return render_template('review_preferences.html',
-                           form_data=form_data,
-                           user_profile=user_profile,
-                           favorite_artists=favorite_artists,
-                           favorite_genres=favorite_genres)
 
 @app.route('/find_tracks', methods=['GET'])
 def find_tracks():

@@ -1,33 +1,223 @@
-{% extends "base.html" %}
-{% block content %}
-<div class="container mt-5">
-    <h1 class="text-center mb-4">Your Spotify Insights</h1>
-    
-    <div class="row">
-        <div class="col-md-6">
-            <h3>Favorite Artists</h3>
-            <ul class="list-group">
-                {% for artist in favorite_artists %}
-                    <li class="list-group-item">{{ artist.name }}</li>
-                {% endfor %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Spotify Insights - MoodWave</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1, h2, h3 {
+            color: #1DB954;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        li {
+            background: #f0f0f0;
+            margin-bottom: 5px;
+            padding: 10px;
+            border-radius: 3px;
+        }
+        .btn {
+            display: inline-block;
+            background: #1DB954;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 20px;
+            margin-top: 20px;
+            transition: background-color 0.3s;
+        }
+        .btn:hover {
+            background: #1ED760;
+        }
+        .checkbox-list {
+            display: flex;
+            flex-wrap: wrap;
+        }
+        .checkbox-item {
+            width: 50%;
+            padding: 5px;
+        }
+        .track-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .wayback-machine {
+            background-color: #e6f7ff;
+            border-left: 5px solid #1DB954;
+        }
+        .current-preferences {
+            background-color: #fff0f5;
+            border-left: 5px solid #ff69b4;
+        }
+        audio {
+            width: 100%;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Your Spotify Insights</h1>
+        
+        <div class="section current-preferences">
+            <h2>Your Current Preferences</h2>
+            <ul>
+                <li><strong>Mood:</strong> {{ form_data.get('mood', 'Not specified') }}</li>
+                <li><strong>Desired Mood:</strong> {{ form_data.get('desired_mood', 'Not specified') }}</li>
+                <li><strong>Activity:</strong> {{ form_data.get('activity', 'Not specified') }}</li>
+                <li><strong>Energy Level:</strong> {{ form_data.get('energy_level', 'Not specified') }}</li>
+                <li><strong>Time of Day:</strong> {{ form_data.get('time_of_day', 'Not specified') }}</li>
+                <li><strong>Discovery Level:</strong> {{ form_data.get('discovery_level', 'Not specified') }}</li>
             </ul>
         </div>
-        <div class="col-md-6">
-            <h3>Favorite Genres</h3>
-            <ul class="list-group">
-                {% for genre in favorite_genres %}
-                    <li class="list-group-item">{{ genre.name }}</li>
-                {% endfor %}
-            </ul>
+
+        <div class="section">
+            <h2>Your Top Artists</h2>
+            <form id="artistForm">
+                <div class="checkbox-list">
+                    {% for artist in top_artists %}
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="artist-{{ loop.index }}" name="selected_artists" value="{{ artist.name }}">
+                        <label for="artist-{{ loop.index }}">{{ artist.name }}</label>
+                    </div>
+                    {% endfor %}
+                </div>
+            </form>
         </div>
+
+        <div class="section">
+            <h2>Your Top Genres</h2>
+            <form id="genreForm">
+                <div class="checkbox-list">
+                    {% for genre in top_genres %}
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="genre-{{ loop.index }}" name="selected_genres" value="{{ genre.name }}">
+                        <label for="genre-{{ loop.index }}">{{ genre.name }}</label>
+                    </div>
+                    {% endfor %}
+                </div>
+            </form>
+        </div>
+
+        <div class="section">
+            <h2>Recently Played Tracks</h2>
+            <form id="recentTracksForm">
+                <div class="track-list">
+                    {% for item in recent_tracks %}
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="recent-{{ loop.index }}" name="selected_recent" value="{{ item.track.id }}">
+                        <label for="recent-{{ loop.index }}">
+                            {{ item.track.name }} - {{ item.track.artists[0].name }}
+                            {% if item.track.preview_url %}
+                            <audio controls>
+                                <source src="{{ item.track.preview_url }}" type="audio/mpeg">
+                                Your browser does not support the audio element.
+                            </audio>
+                            {% endif %}
+                        </label>
+                    </div>
+                    {% endfor %}
+                </div>
+            </form>
+        </div>
+
+        <div class="section wayback-machine">
+            <h2>The Way Back Machine</h2>
+            <p>Remember these forgotten gems from your library?</p>
+            <form id="waybackForm">
+                <div class="track-list">
+                    {% for track in wayback_tracks %}
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="wayback-{{ loop.index }}" name="selected_wayback" value="{{ track.track.id }}">
+                        <label for="wayback-{{ loop.index }}">
+                            {{ track.track.name }} - {{ track.track.artists[0].name }}
+                            <small>(Added on: {{ track.added_at_formatted }})</small>
+                            {% if track.track.preview_url %}
+                            <audio controls>
+                                <source src="{{ track.track.preview_url }}" type="audio/mpeg">
+                                Your browser does not support the audio element.
+                            </audio>
+                            {% endif %}
+                        </label>
+                    </div>
+                    {% endfor %}
+                </div>
+            </form>
+        </div>
+
+        <div class="section">
+            <h2>Playlist Picks</h2>
+            <p>Discover tracks from your less frequented playlists:</p>
+            <form id="playlistPicksForm">
+                <div class="track-list">
+                    {% for pick in playlist_picks %}
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="playlist-pick-{{ loop.index }}" name="selected_playlist_picks" value="{{ pick.id }}">
+                        <label for="playlist-pick-{{ loop.index }}">
+                            {{ pick.name }} - {{ pick.artists|join(', ') }}
+                            <small>(From playlist: {{ pick.playlist_name }})</small>
+                            {% if pick.preview_url %}
+                            <audio controls>
+                                <source src="{{ pick.preview_url }}" type="audio/mpeg">
+                                Your browser does not support the audio element.
+                            </audio>
+                            {% endif %}
+                        </label>
+                    </div>
+                    {% endfor %}
+                </div>
+            </form>
+        </div>
+
+        <a href="#" class="btn" onclick="submitPreferences()">Confirm Preferences</a>
     </div>
-    
-    <div class="mt-4">
-        <h3>User Profile</h3>
-        <p>Name: {{ user_profile.display_name }}</p>
-        <p>Email: {{ user_profile.email }}</p>
-    </div>
-    
-    <a href="{{ url_for('review_preferences') }}" class="btn btn-primary btn-block mt-4">Review Preferences</a>
-</div>
-{% endblock %}
+
+    <script>
+    function submitPreferences() {
+        const selectedArtists = Array.from(document.querySelectorAll('input[name="selected_artists"]:checked')).map(el => el.value);
+        const selectedGenres = Array.from(document.querySelectorAll('input[name="selected_genres"]:checked')).map(el => el.value);
+        const selectedRecentTracks = Array.from(document.querySelectorAll('input[name="selected_recent"]:checked')).map(el => el.value);
+        const selectedWaybackTracks = Array.from(document.querySelectorAll('input[name="selected_wayback"]:checked')).map(el => el.value);
+        const selectedPlaylistPicks = Array.from(document.querySelectorAll('input[name="selected_playlist_picks"]:checked')).map(el => el.value);
+        
+        const preferences = {
+            artists: selectedArtists,
+            genres: selectedGenres,
+            recentTracks: selectedRecentTracks,
+            waybackTracks: selectedWaybackTracks,
+            playlistPicks: selectedPlaylistPicks
+        };
+
+        console.log('Selected Preferences:', preferences);
+        
+        // TODO: Implement the AJAX call to send data to server
+        // After sending, redirect to the next page
+        // window.location.href = '/generate_playlist';
+    }
+    </script>
+</body>
+</html>

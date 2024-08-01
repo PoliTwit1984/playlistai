@@ -4,135 +4,120 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MoodWave - Create Your Playlist</title>
-    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap" rel="stylesheet"> <!-- Add Lato font -->
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        body, html {
-            margin: 0;
-            padding: 0;
-            font-family: 'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen-Sans, Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;
-            background-color: #f0f2f5;
-        }
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 20px;
-            background-color: white;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .logo {
-            font-weight: bold;
-            font-size: 24px;
-            color: #000;
-            text-decoration: none;
-        }
-        .nav a {
-            margin-left: 20px;
-            text-decoration: none;
-            color: #333;
-            font-size: 14px;
-        }
-        .wave-container {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 0;
-            overflow: hidden;
-        }
-        .wave {
-            position: absolute;
-            top: 50%;
-            left: 0;
-            width: 200%;
-            height: 100%;
-            background: url('data:image/svg+xml;utf8,<svg viewBox="0 0 1440 320" xmlns="http://www.w3.org/2000/svg"><path fill="%234a69bd" fill-opacity="0.1" d="M0,192L48,197.3C96,203,192,213,288,229.3C384,245,480,267,576,250.7C672,235,768,181,864,181.3C960,181,1056,235,1152,234.7C1248,235,1344,181,1392,154.7L1440,128L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>') repeat-x;
-            animation: wave 10s linear infinite;
-            transform: translateY(-50%);
-        }
-        @keyframes wave {
-            0% {
-                transform: translateX(0) translateY(-50%);
-            }
-            100% {
-                transform: translateX(-50%) translateY(-50%);
-            }
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
-        }
-        .main-title {
-            font-size: 64px;
-            font-weight: 700;
-            margin-bottom: 20px;
-            color: #000;
-        }
-        .hero-section {
-            text-align: center;
-            padding: 80px 0;
-        }
-        .lead {
-            font-size: 24px;
-            color: #666;
-            margin-bottom: 30px;
-        }
-        .welcome-text {
-            font-family: 'Lato', sans-serif;
-            font-size: 22px;
-            font-weight: 400;
-            margin-bottom: 20px;
-            color: #333;
-        }
-        .button-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin-top: 4rem; /* Increased margin to 4rem for more space */
-        }
-        .btn-primary {
-            display: block;
-            width: 30%;
-            padding: 15px;
-            background-color: #4a69bd;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 18px;
-            font-weight: 600;
-            cursor: pointer;
-            text-align: center;
-            text-decoration: none; /* Ensure text is not underlined */
-            transition: all 0.3s ease;
-        }
-        .btn-primary:hover {
-            background-color: #3c5aa6;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 10px rgba(74, 105, 189, 0.2);
-        }
-        .features-section {
-            background-color: #f0f2f5;
-            padding: 4rem 0;
-        }
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 2rem;
-        }
-        .feature-card {
-            background-color: #fff;
-            padding: 2rem;
-            border-radius: 5px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        }
-        footer {
-            background-color: #f0f2f5;
-            text-align: center;
-            padding: 1rem 0;
-            margin-top: 2rem;
-        }
+body, html {
+    margin: 0;
+    padding: 0;
+    font-family: 'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen-Sans, Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;
+    background-color: #f0f2f5;
+}
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    background-color: white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    z-index: 2;
+    position: relative;
+}
+.logo {
+    font-weight: bold;
+    font-size: 24px;
+    color: #000;
+    text-decoration: none;
+}
+.nav {
+    display: flex;
+    gap: 20px;
+}
+.nav a {
+    text-decoration: none;
+    color: #333;
+    font-size: 14px;
+    align-self: center; /* Align vertically center */
+}
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+    background-color: rgba(255, 255, 255, 0.9);
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(74, 105, 189, 0.1);
+    position: relative;
+    z-index: 1;
+}
+.main-title {
+    font-size: 64px;
+    font-weight: 700;
+    margin-bottom: 20px;
+    color: #000;
+}
+.hero-section {
+    text-align: center;
+    padding: 80px 0;
+}
+.lead {
+    font-size: 24px;
+    color: #666;
+    margin-bottom: 30px;
+}
+.welcome-text {
+    font-family: 'Lato', sans-serif;
+    font-size: 22px;
+    font-weight: 400;
+    margin-bottom: 20px;
+    color: #333;
+}
+.button-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 4rem;
+}
+.btn-primary {
+    display: block;
+    width: 30%;
+    padding: 15px;
+    background-color: #4a69bd;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 18px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 10px rgba(74, 105, 189, 0.2); /* Subtle shadow */
+}
+.btn-primary:hover {
+    background-color: #3c5aa6;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(74, 105, 189, 0.4); /* Increase shadow on hover */
+}
+.features-section {
+    background-color: #f0f2f5;
+    padding: 4rem 0;
+}
+.features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 2rem;
+}
+.feature-card {
+    background-color: #fff;
+    padding: 2.5rem; /* Increased padding */
+    border-radius: 5px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+footer {
+    background-color: #f0f2f5;
+    text-align: center;
+    padding: 1.5rem 0; /* Increased padding */
+    margin-top: 2rem;
+}
     </style>
 </head>
 <body>
@@ -141,7 +126,7 @@
         <nav class="nav">
             <a href="index.html">Home</a>
             {% if user %}
-                <a href="initial_form.html">Create Playlist</a>
+                <a href="{{ url_for('initial_form') }}">Create Playlist</a>
                 <a href="{{ url_for('sign_out') }}">Sign Out</a>
             {% else %}
                 <a href="{{ url_for('login') }}">Sign In</a>
@@ -149,33 +134,27 @@
         </nav>
     </header>
 
-    <main>
-        <div class="hero-section">
+    <main role="main">
+        <section class="hero-section">
             <div class="container">
-                <h1 class="main-title">MoodWave</h1>
-                <p class="lead">
-                    Elevate your listening experience with AI-powered playlists.<br>
-                    Crafted for your mood, powered by Spotify.
-                </p>
-                
+                <h1 id="moodwave" class="main-title">MoodWave</h1>
+                <p>Elevate your listening experience with AI-powered playlists.<br>
+                Crafted for your mood, powered by Spotify.</p>
+
                 {% if user %}
-                    <p class="welcome-text">Welcome back, {{ user.display_name }}. Let's create you a kickass playlist!</p>
+                    <p>Welcome back, {{ user.display_name }}. Let's create you a kickass playlist!</p>
                     <div class="button-container">
-                        <a href="initial_form.html" class="btn btn-primary">Next</a>
+                        <a href="{{ url_for('initial_form') }}" class="btn btn-primary" id="nextButton">Next</a>
                     </div>
                 {% else %}
                     <div class="button-container">
-                        <a href="{{ url_for('login') }}" class="btn btn-primary">Connect with Spotify</a>
+                        <a href="{{ url_for('login') }}" class="btn btn-primary" id="spotifyConnectButton">Connect with Spotify</a>
                     </div>
                 {% endif %}
             </div>
-        </div>
+        </section>
 
-        <div class="wave-container">
-            <div class="wave"></div>
-        </div>
-
-        <div class="features-section">
+        <section class="features-section">
             <div class="container">
                 <div class="features-grid">
                     <div class="feature-card">
@@ -192,13 +171,32 @@
                     </div>
                 </div>
             </div>
-        </div>
+        </section>
     </main>
 
-    <footer>
-        <div class="container">
-            <p>&copy; 2024 MoodWave. All rights reserved.</p>
-        </div>
+    <footer class="container">
+        <p>© 2024 MoodWave. All rights reserved.</p>
     </footer>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const nextButton = document.getElementById('nextButton');
+        const spotifyConnectButton = document.getElementById('spotifyConnectButton');
+
+        if (nextButton) {
+            nextButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                window.location.href = this.href;
+            });
+        }
+
+        if (spotifyConnectButton) {
+            spotifyConnectButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                window.location.href = this.href;
+            });
+        }
+    });
+    </script>
 </body>
 </html>
