@@ -361,4 +361,4 @@ def generate_playlist():
         return redirect(url_for('find_tracks'))
     
 if __name__ == '__app__':
-    app.run(host='0.0.0.0', port=8888, debug=True)s
+    app.run(host='0.0.0.0', port=8888, debug=True)

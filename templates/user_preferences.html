@@ -5,30 +5,53 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Your Spotify Insights - MoodWave</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
+        body, html {
             margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen-Sans, Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;
+            background-color: #f0f2f5;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             padding: 20px;
-            background-color: #f4f4f4;
+            background-color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .logo {
+            font-weight: bold;
+            font-size: 24px;
+        }
+        .nav a {
+            margin-left: 20px;
+            text-decoration: none;
             color: #333;
+            font-size: 14px;
         }
         .container {
-            max-width: 800px;
-            margin: auto;
-            background: white;
-            padding: 20px;
-            border-radius: 5px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            max-width: 600px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(74, 105, 189, 0.1);
+            position: relative;
+            z-index: 1;
         }
-        h1, h2, h3 {
-            color: #1DB954;
+        h1, h2 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 28px;
+            font-weight: 600;
+            color: #000;
         }
         .section {
             margin-bottom: 30px;
             padding: 15px;
-            background-color: #f9f9f9;
-            border-radius: 5px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
         }
         ul {
             list-style-type: none;
@@ -40,18 +63,24 @@
             padding: 10px;
             border-radius: 3px;
         }
-        .btn {
-            display: inline-block;
-            background: #1DB954;
+        .btn-next {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            background-color: #4a69bd;
             color: white;
-            padding: 10px 20px;
-            text-decoration: none;
-            border-radius: 20px;
-            margin-top: 20px;
-            transition: background-color 0.3s;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 2rem;
+            transition: all 0.3s ease;
         }
-        .btn:hover {
-            background: #1ED760;
+        .btn-next:hover {
+            background-color: #3c5aa6;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(74, 105, 189, 0.2);
         }
         .checkbox-list {
             display: flex;
@@ -70,8 +99,8 @@
             border-left: 5px solid #1DB954;
         }
         .current-preferences {
-            background-color: #fff0f5;
-            border-left: 5px solid #ff69b4;
+            background-color: #fff;
+            border-left: 5px solid #4a69bd;
         }
         audio {
             width: 100%;
@@ -80,9 +109,18 @@
     </style>
 </head>
 <body>
+    <header class="header">
+        <div class="logo">MoodWave</div>
+        <nav class="nav">
+            <a href="#">Home</a>
+            <a href="#">Create Playlist</a>
+            <a href="#">Sign Out</a>
+        </nav>
+    </header>
+
     <div class="container">
         <h1>Your Spotify Insights</h1>
-        
+
         <div class="section current-preferences">
             <h2>Your Current Preferences</h2>
             <ul>
@@ -193,13 +231,14 @@
             </form>
         </div>
 
-        <a href="#" class="btn" onclick="submitPreferences()">Confirm Preferences</a>
+        <button class="btn-next" onclick="submitPreferences()">Confirm Preferences</button>
     </div>
 
     <script>
     function submitPreferences() {
         const selectedArtists = Array.from(document.querySelectorAll('input[name="selected_artists"]:checked')).map(el => el.value);
         const selectedGenres = Array.from(document.querySelectorAll('input[name="selected_genres"]:checked')).map(el => el.value);
+ 
         const selectedRecentTracks = Array.from(document.querySelectorAll('input[name="selected_recent"]:checked')).map(el => el.value);
         const selectedWaybackTracks = Array.from(document.querySelectorAll('input[name="selected_wayback"]:checked')).map(el => el.value);
         const selectedPlaylistPicks = Array.from(document.querySelectorAll('input[name="selected_playlist_picks"]:checked')).map(el => el.value);
