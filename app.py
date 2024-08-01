@@ -360,5 +360,5 @@ def generate_playlist():
         flash('An unexpected error occurred. Please try again.', 'danger')
         return redirect(url_for('find_tracks'))
     
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8888, debug=True)
+if __name__ == '__app__':
+    app.run(host='0.0.0.0', port=8888, debug=True)s

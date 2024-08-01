@@ -1,0 +1,4 @@
+{
+    "appService.defaultWebAppToDeploy": "/subscriptions/e6a9e81d-e4f2-4c27-875b-b0d4586e6c8b/resourceGroups/rg-waveform/providers/Microsoft.Web/sites/waveform",
+    "appService.deploySubpath": "."
+}
