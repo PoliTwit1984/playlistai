@@ -210,25 +210,32 @@ def load_user_preferences():
             flash('Unable to authenticate with Spotify. Please try logging in again.', 'danger')
             return redirect(url_for('initial_form'))
 
+        # Retrieve form data from session
+        form_data = session.get('form_data', {})
+        app.logger.debug(f"Retrieved form data from session: {form_data}")
+
         # Get user profile
         user_profile = get_user_profile(sp)
-        
+        app.logger.debug(f"User profile retrieved: {user_profile}")
+
         # Get top artists and genres
         top_artists = get_user_top_artists(sp, limit=10)
         top_genres = get_user_top_genres(sp, limit=10)
-        
+        app.logger.debug(f"Top artists: {top_artists}")
+        app.logger.debug(f"Top genres: {top_genres}")
+
         # Get recently played tracks
         recent_tracks = sp.current_user_recently_played(limit=20)['items']
-        
+        app.logger.debug(f"Recent tracks retrieved: {len(recent_tracks)}")
+
         # Get "Way Back Machine" tracks
         wayback_tracks = get_wayback_tracks(sp, limit=10)
-        
+        app.logger.debug(f"Wayback tracks retrieved: {len(wayback_tracks)}")
+
         # Get Playlist Picks
         playlist_picks = get_playlist_picks(sp, limit=10)
-        
-        # Get form data from session
-        form_data = session.get('form_data', {})
-        
+        app.logger.debug(f"Playlist picks retrieved: {len(playlist_picks)}")
+
         return render_template('user_preferences.html',
                                user_profile=user_profile,
                                top_artists=top_artists,
@@ -241,7 +248,6 @@ def load_user_preferences():
         app.logger.error(f"Error in load_user_preferences: {str(e)}", exc_info=True)
         flash('An error occurred while loading your preferences. Please try again.', 'danger')
         return redirect(url_for('initial_form'))
-
 
 @app.route('/find_tracks', methods=['GET'])
 def find_tracks():
