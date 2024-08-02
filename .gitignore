@@ -64,6 +64,9 @@ db.sqlite3-journal
 # Flask stuff:
 instance/
 .webassets-cache
+.flask_session
+__queuestorage__
+
 
 # Scrapy stuff:
 .scrapy
@@ -121,5 +124,6 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/
+
 
 # End of .gitignore file
