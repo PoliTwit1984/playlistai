@@ -19,6 +19,11 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, HiddenField, IntegerField, TextAreaField, SubmitField, SelectField
 from wtforms.validators import DataRequired, NumberRange
 
+# TODO: Break this function into smaller functions
+#  This is a low priority task that involves refactoring the backend code.
+#  Also, update the documentation accordingly.
+#  labels: priority: low, area: backend, type: documentation, type: 
+
 # Set up logging
 log_directory = "logs"
 if not os.path.exists(log_directory):
