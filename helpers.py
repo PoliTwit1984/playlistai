@@ -44,7 +44,10 @@ class PlaylistForm(FlaskForm):
     activity = StringField('Activity')
     energy_level = IntegerField('Energy Level', validators=[DataRequired(), NumberRange(min=0, max=100)])
     time_of_day = SelectField('Time of Day', choices=[('Morning', 'Morning'), ('Afternoon', 'Afternoon'), ('Evening', 'Evening'), ('Night', 'Night')])
-    duration = StringField('Duration')
+    duration = IntegerField('Duration (minutes)', validators=[
+        DataRequired(), NumberRange(min=1, max=300, message="Please enter a duration between 1 and 300 minutes.")
+    ])
+    
     discovery_level = StringField('Discovery Level')
     favorite_artists = StringField('Favorite Artists')
     favorite_genres = StringField('Favorite Genres')
@@ -127,6 +130,22 @@ def get_playlist_picks(sp, limit=10, max_playlist_age_days=365):
 
 @retry(wait=wait_exponential(multiplier=1, min=4, max=60), stop=stop_after_attempt(5))
 def make_spotify_request_with_retry(sp, method, *args, **kwargs):
+    """
+    Makes a request to the Spotify API with retry logic in case of rate limiting.
+
+    Args:
+        sp (Spotify): The Spotify object used to make the request.
+        method (str): The method to call on the Spotify object.
+        *args: Variable length argument list to be passed to the method.
+        **kwargs: Arbitrary keyword arguments to be passed to the method.
+
+    Raises:
+        SpotifyException: If an error occurs during the request.
+
+    Returns:
+        The result of the Spotify API request.
+
+    """
     try:
         return getattr(sp, method)(*args, **kwargs)
     except SpotifyException as e:
@@ -139,6 +158,22 @@ def make_spotify_request_with_retry(sp, method, *args, **kwargs):
             raise
         
 def get_openai_recommendations(client, user_preferences, tracks, num_tracks=30):
+    '''
+    Generate personalized playlist recommendations based on user preferences.
+    Args:
+        client (OpenAI.Client): An instance of the OpenAI client.
+        user_preferences (dict): A dictionary containing user preferences for the playlist.
+        tracks (list): A list of tracks to choose from for the playlist.
+        num_tracks (int, optional): The number of tracks to include in the playlist. Defaults to 30.
+    Returns:
+        str: The generated playlist recommendations in JSON format.
+    Raises:
+        Exception: If an error occurs during the recommendation generation process.
+    Example:
+        playlist = get_openai_recommendations(client, user_preferences, tracks, num_tracks=50)
+    '''
+    
+    
     try:
         familiar_tracks = [t for t in tracks if t.get('familiarity', 0) > 0.5]
         discovery_tracks = [t for t in tracks if t.get('familiarity', 0) <= 0.5]

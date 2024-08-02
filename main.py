@@ -96,8 +96,16 @@ def login():
     app.logger.debug(f"Generated auth URL: {auth_url}")
     return redirect(auth_url)
 
+
 @app.route('/initial_form', methods=['GET', 'POST'])
 def initial_form():
+    """
+    Renders the initial form template and handles form submission.
+    Returns:
+        If the request method is 'POST' and the form is submitted and validated, redirects to 'load_user_preferences' route.
+        If the Spotify client is not available, redirects to 'login' route.
+        If the form is not submitted or validation fails, renders the initial form template with the form object.
+    """
     app.logger.debug("Entering initial_form function")
     
     sp = get_spotify_client()
@@ -114,6 +122,10 @@ def initial_form():
         if form.validate_on_submit():
             app.logger.debug("Form submitted and validated")
             try:
+                # Convert duration from minutes to number of tracks
+                duration_minutes = form.duration.data
+                num_tracks = round(duration_minutes / 3.5)
+                
                 # Process form data
                 session['form_data'] = {
                     'name': form.name.data,
@@ -122,7 +134,8 @@ def initial_form():
                     'activity': form.activity.data,
                     'energy_level': form.energy_level.data,
                     'time_of_day': form.time_of_day.data,
-                    'duration': form.duration.data,
+                    'duration_minutes': duration_minutes,
+                    'num_tracks': num_tracks,
                     'discovery_level': form.discovery_level.data,
                     'favorite_artists': form.favorite_artists.data,
                     'favorite_genres': form.favorite_genres.data,
@@ -140,6 +153,7 @@ def initial_form():
     
     app.logger.debug("Rendering initial form template")
     return render_template('initial_form.html', form=form)
+
 @app.route('/save_playlist', methods=['POST'])
 def save_playlist():
     sp = get_spotify_client()

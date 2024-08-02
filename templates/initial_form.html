@@ -199,8 +199,10 @@
             </div>
         
             <div class="form-group">
-                <label for="{{ form.duration.id }}">Number of Songs</label>
-                {{ form.duration(type="number", min="1", placeholder="Enter number of songs") }}
+                {{ form.duration.label }}
+                {{ form.duration(class="form-control", type="number", min="1", max="300") }}
+                <small class="form-text text-muted">Enter the desired playlist duration in minutes (1-300).</small>
+                <p id="estimatedTracks"></p>
             </div>
         
             <div class="form-group">
@@ -222,6 +224,7 @@
         </form>
     
         <script>
+            
             document.addEventListener('DOMContentLoaded', function() {
                 const sliders = document.querySelectorAll('.slider');
                 sliders.forEach(slider => {
@@ -237,6 +240,18 @@
                     });
                 });
             });
+            const durationInput = document.getElementById('duration');
+            const estimatedTracks = document.getElementById('estimatedTracks');
+
+            durationInput.oninput = function() {
+                const duration = parseInt(this.value);
+                if (duration > 0) {
+                    const tracks = Math.round(duration / 3.5);
+                    estimatedTracks.textContent = `Estimated number of tracks: ${tracks}`;
+                } else {
+                    estimatedTracks.textContent = '';
+                }
+            }
         </script>
 </body>
 </html>
