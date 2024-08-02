@@ -290,16 +290,16 @@ def get_expanded_track_pool(sp, favorite_artists, favorite_genres, user_profile,
         all_tracks = list({track['id']: track for track in all_tracks}.values())
         logger.debug(f"Total tracks after deduplication: {len(all_tracks)}")
 
-        # Check if user_profile is a dictionary
-        if not isinstance(user_profile, dict):
-            logger.warning(f"user_profile is not a dictionary. Type: {type(user_profile)}. Using empty dict.")
-            user_profile = {}
+        # Calculate discovery scores
+        for track in all_tracks:
+            track['discovery_score'] = calculate_discovery_score(track, user_profile, sp)
 
-        sorted_tracks = sorted(all_tracks, key=lambda track: calculate_discovery_score(track, user_profile), reverse=True)
+        # Sort tracks by discovery score
+        sorted_tracks = sorted(all_tracks, key=lambda x: x['discovery_score'], reverse=True)
 
-        split_index = int(len(sorted_tracks) * (1 - discovery_ratio))
-        familiar_tracks = sorted_tracks[split_index:]
+        split_index = int(len(sorted_tracks) * discovery_ratio)
         discovery_tracks = sorted_tracks[:split_index]
+        familiar_tracks = sorted_tracks[split_index:]
 
         logger.debug(f"Familiar tracks: {len(familiar_tracks)}, Discovery tracks: {len(discovery_tracks)}")
 
@@ -466,3 +466,83 @@ def get_wayback_tracks(sp, limit=5, max_recent_tracks=200, max_saved_tracks=500)
         # You could add more track features here if needed
 
     return wayback_tracks[:limit]
+
+def calculate_discovery_score(track, user_profile, sp):
+    """
+    Calculate a discovery score for a track based on the user's listening history and preferences.
+    
+    :param track: A dictionary containing track information
+    :param user_profile: The user's Spotify profile
+    :param sp: Spotify client object
+    :return: A discovery score between 0 and 1, where 1 is the most discoverable
+    """
+    score = 0.5  # Start with a neutral score
+
+    try:
+        # Factor 1: Track popularity (less popular = more discoverable)
+        popularity = track.get('popularity', 50)
+        score += (100 - popularity) / 200  # Contributes up to 0.5 to the score
+
+        # Factor 2: Artist familiarity
+        artist_id = track['artists'][0]['id']
+        try:
+            artist_info = sp.artist(artist_id)
+            artist_popularity = artist_info['popularity']
+            score += (100 - artist_popularity) / 200  # Contributes up to 0.5 to the score
+        except:
+            pass  # If we can't get artist info, we'll skip this factor
+
+        # Factor 3: Genre preference
+        user_top_genres = get_user_top_genres(sp, limit=50)
+        artist_genres = set(artist_info.get('genres', []))
+        genre_overlap = len(set(genre['name'] for genre in user_top_genres) & artist_genres)
+        score -= genre_overlap * 0.1  # Reduce score for each overlapping genre (max 0.5 reduction)
+
+        # Factor 4: Recency of listening
+        recent_tracks = sp.current_user_recently_played(limit=50)
+        recent_track_ids = [item['track']['id'] for item in recent_tracks['items']]
+        if track['id'] in recent_track_ids:
+            score -= 0.3  # Significantly reduce score if recently played
+
+        # Factor 5: Presence in user's playlists
+        user_playlists = sp.current_user_playlists(limit=50)
+        for playlist in user_playlists['items']:
+            if sp.playlist_tracks(playlist['id'])['items']:
+                playlist_track_ids = [item['track']['id'] for item in sp.playlist_tracks(playlist['id'])['items']]
+                if track['id'] in playlist_track_ids:
+                    score -= 0.2  # Reduce score if track is in user's playlist
+                    break  # No need to check other playlists
+
+    except Exception as e:
+        logger.error(f"Error calculating discovery score: {str(e)}")
+        return 0.5  # Return neutral score if there's an error
+
+    # Ensure the score is between 0 and 1
+    return max(0, min(score, 1))
+
+
+def categorize_mood(audio_features):
+    """
+    Categorize the mood of a track based on its audio features.
+    
+    :param audio_features: A dictionary of audio features from Spotify's API
+    :return: A string representing the mood category
+    """
+    valence = audio_features['valence']
+    energy = audio_features['energy']
+    
+    if valence > 0.6 and energy > 0.6:
+        return 'Happy'
+    elif valence < 0.4 and energy < 0.4:
+        return 'Sad'
+    elif valence < 0.4 and energy > 0.6:
+        return 'Angry'
+    elif valence > 0.6 and energy < 0.4:
+        return 'Relaxed'
+    elif energy > 0.7:
+        return 'Energetic'
+    elif valence < 0.3:
+        return 'Melancholic'
+    else:
+        return 'Neutral'
+

@@ -1,2 +1,15 @@
 export FLASK_APP=main.py --debug
 flask run -h 0.0.0.0 -p 8888
+
+
+c. Fetch User's Spotify Data:
+
+Calls get_user_top_tracks(sp, limit=50)
+Calls get_user_recently_played(sp, limit=50)
+Calls get_user_saved_tracks(sp, limit=50)
+
+d. Get Recommendations:
+
+Calls select_seed_tracks() with top_tracks, recent_tracks, saved_tracks
+Calls get_spotify_recommendations() with seed_tracks and genre_preferences - is this going to get us enough tracks for a high discoverabbility score (you didn't mentionthat in summary)
+We need to change duration to minutes instead of num tracks
