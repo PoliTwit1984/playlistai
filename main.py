@@ -5,13 +5,15 @@ from dotenv import load_dotenv
 from openai import OpenAI
 import os
 import spotipy
+import logging
+from logging.handlers import RotatingFileHandler
 
 
 from helpers import (
     PlaylistForm, get_user_profile, get_user_top_artists, get_user_top_genres,
     get_expanded_track_pool, parse_openai_response, find_tracks_on_spotify,
     make_spotify_request_with_retry, logger, get_openai_recommendations, PlaylistForm, 
-    get_wayback_tracks, get_playlist_picks
+    get_wayback_tracks, get_playlist_picks, calculate_discovery_score
 )
 # Load environment variables and configure app (as before)
 load_dotenv()
@@ -31,6 +33,23 @@ sp_oauth = SpotifyOAuth(
 )
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+
+# Set up logging
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+# Set up generate_playlist logger
+generate_playlist_logger = logging.getLogger('generate_playlist')
+generate_playlist_logger.setLevel(logging.DEBUG)
+if not os.path.exists('logs'):
+    os.makedirs('logs')
+file_handler = RotatingFileHandler('logs/generate_playlist.log', maxBytes=10240, backupCount=10)
+file_handler.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+file_handler.setFormatter(formatter)
+generate_playlist_logger.addHandler(file_handler)
+
 
 def get_spotify_client():
     app.logger.debug("Entering get_spotify_client function")
@@ -329,7 +348,7 @@ def generate_playlist():
             "current_mood": float(initial_form_data.get('mood', 50)),
             "desired_mood": float(initial_form_data.get('desired_mood', 50)),
             "activity": initial_form_data.get('activity'),
-            "energy_level": initial_form_data.get('energy_level'),
+            "energy_level": float(initial_form_data.get('energy_level', 50)),
             "time_of_day": initial_form_data.get('time_of_day'),
             "discovery_level": float(initial_form_data.get('discovery_level', 30)) / 100,
             "playlist_description": initial_form_data.get('playlist_description'),
@@ -342,10 +361,6 @@ def generate_playlist():
             )
         }
 
-        # Get user's top artists and genres
-        top_artists = get_user_top_artists(sp, limit=10)
-        top_genres = get_user_top_genres(sp, limit=10)
-
         # Generate expanded track pool
         familiar_tracks, discovery_tracks = get_expanded_track_pool(
             sp, 
@@ -354,24 +369,26 @@ def generate_playlist():
             sp.me(),
             discovery_ratio=user_preferences['discovery_level']
         )
-
-        # Add tracks from playlist picks and wayback machine
-        playlist_picks = get_playlist_picks(sp, limit=20)
-        wayback_tracks = get_wayback_tracks(sp, limit=20)
+        
+        # Log sample tracks with audio analysis
+        if familiar_tracks:
+            logger.debug(f"Sample familiar track with audio analysis: {familiar_tracks[0]}")
+        if discovery_tracks:
+            logger.debug(f"Sample discovery track with audio analysis: {discovery_tracks[0]}")
 
         # Combine all tracks and remove duplicates
-        all_tracks = familiar_tracks + discovery_tracks + playlist_picks + wayback_tracks
+        all_tracks = familiar_tracks + discovery_tracks
         all_tracks = list({track['id']: track for track in all_tracks}.values())
 
         # Limit to 200 tracks, maintaining the discovery ratio
         discovery_count = int(200 * user_preferences['discovery_level'])
         familiar_count = 200 - discovery_count
         all_tracks = (
-            sorted(familiar_tracks, key=lambda x: calculate_discovery_score(x, sp.me()))[:familiar_count] +
-            sorted(discovery_tracks, key=lambda x: calculate_discovery_score(x, sp.me()), reverse=True)[:discovery_count]
+            sorted(familiar_tracks, key=lambda x: x.get('discovery_score', 0))[:familiar_count] +
+            sorted(discovery_tracks, key=lambda x: x.get('discovery_score', 0), reverse=True)[:discovery_count]
         )
 
-        logger.debug(f"Generated track pool size: {len(all_tracks)}")
+        logger.debug(f"Final track pool size: {len(all_tracks)}")
 
         # Call OpenAI for recommendations
         try:
@@ -381,6 +398,8 @@ def generate_playlist():
                 all_tracks, 
                 num_tracks=int(initial_form_data.get('duration', 30))
             )
+            logger.debug(f"Raw OpenAI response: {openai_response}")
+            
         except Exception as e:
             logger.error(f"Error getting OpenAI recommendations: {str(e)}", exc_info=True)
             flash('Error generating playlist recommendations. Please try again.', 'danger')
@@ -408,6 +427,21 @@ def generate_playlist():
         logger.error(f"Unexpected error in generate_playlist: {str(e)}", exc_info=True)
         flash('An unexpected error occurred. Please try again.', 'danger')
         return redirect(url_for('load_user_preferences'))
-    
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8888, debug=True)
+    
+@app.route('/confirm_preferences', methods=['POST'])
+def confirm_preferences():
+    logger.debug("Entering confirm_preferences route")
+    try:
+        preferences = request.form.to_dict()
+        logger.debug(f"Received preferences: {preferences}")
+        session['form_data'] = preferences
+        logger.info("Preferences confirmed and stored in session")
+        return jsonify({"success": True, "message": "Preferences confirmed successfully"})
+    except Exception as e:
+        logger.error(f"Error in confirm_preferences: {str(e)}")
+        return jsonify({"success": False, "message": str(e)}), 400
+    finally:
+        logger.debug("Exiting confirm_preferences route")

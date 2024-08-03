@@ -37,6 +37,27 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Set up logging for helpers
+helper_logger = logging.getLogger(__name__)
+helper_logger.setLevel(logging.DEBUG)
+
+# Create a file handler
+file_handler = logging.FileHandler('logs/helpers.log')
+file_handler.setLevel(logging.DEBUG)
+
+# Create a console handler
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.INFO)
+
+# Create a formatter
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+file_handler.setFormatter(formatter)
+console_handler.setFormatter(formatter)
+
+# Add the handlers to the logger
+helper_logger.addHandler(file_handler)
+helper_logger.addHandler(console_handler)
+
 class PlaylistForm(FlaskForm):
     name = StringField('Name')
     mood = HiddenField('Current Mood')
@@ -57,6 +78,9 @@ class PlaylistForm(FlaskForm):
 import random
 from datetime import datetime, timedelta
 
+import random
+from datetime import datetime, timedelta
+
 def get_playlist_picks(sp, limit=10, max_playlist_age_days=365):
     """
     Retrieve tracks from the user's less frequently listened to playlists.
@@ -66,13 +90,15 @@ def get_playlist_picks(sp, limit=10, max_playlist_age_days=365):
     :param max_playlist_age_days: Maximum age of playlists to consider
     :return: List of track picks from various playlists
     """
+    helper_logger.debug(f"Fetching playlist picks. Limit: {limit}, Max age: {max_playlist_age_days} days")
+    
     playlist_picks = []
     playlists = sp.current_user_playlists(limit=50)['items']
+    helper_logger.debug(f"Fetched {len(playlists)} user playlists")
     
     # Filter and sort playlists
     filtered_playlists = []
     for playlist in playlists:
-        # Skip playlists that are too new
         if playlist['tracks']['total'] == 0:
             continue
         
@@ -85,6 +111,8 @@ def get_playlist_picks(sp, limit=10, max_playlist_age_days=365):
                     'name': playlist['name'],
                     'tracks_total': playlist['tracks']['total']
                 })
+    
+    helper_logger.debug(f"Filtered to {len(filtered_playlists)} playlists within age limit")
     
     # Sort playlists by number of tracks (ascending) to favor less populated playlists
     filtered_playlists.sort(key=lambda x: x['tracks_total'])
@@ -99,7 +127,6 @@ def get_playlist_picks(sp, limit=10, max_playlist_age_days=365):
         
         if tracks['items']:
             track = tracks['items'][0]['track']
-            # Ensure the track has a preview URL
             if track['preview_url']:
                 playlist_picks.append({
                     'id': track['id'],
@@ -108,6 +135,8 @@ def get_playlist_picks(sp, limit=10, max_playlist_age_days=365):
                     'preview_url': track['preview_url'],
                     'playlist_name': playlist['name']
                 })
+    
+    helper_logger.debug(f"Fetched {len(playlist_picks)} tracks from filtered playlists")
     
     # If we don't have enough tracks, fill with random tracks from all playlists
     while len(playlist_picks) < limit and playlists:
@@ -126,6 +155,7 @@ def get_playlist_picks(sp, limit=10, max_playlist_age_days=365):
                     'playlist_name': playlist['name']
                 })
     
+    helper_logger.debug(f"Final number of playlist picks: {len(playlist_picks)}")
     return playlist_picks
 
 @retry(wait=wait_exponential(multiplier=1, min=4, max=60), stop=stop_after_attempt(5))
@@ -158,22 +188,6 @@ def make_spotify_request_with_retry(sp, method, *args, **kwargs):
             raise
         
 def get_openai_recommendations(client, user_preferences, tracks, num_tracks=30):
-    '''
-    Generate personalized playlist recommendations based on user preferences.
-    Args:
-        client (OpenAI.Client): An instance of the OpenAI client.
-        user_preferences (dict): A dictionary containing user preferences for the playlist.
-        tracks (list): A list of tracks to choose from for the playlist.
-        num_tracks (int, optional): The number of tracks to include in the playlist. Defaults to 30.
-    Returns:
-        str: The generated playlist recommendations in JSON format.
-    Raises:
-        Exception: If an error occurs during the recommendation generation process.
-    Example:
-        playlist = get_openai_recommendations(client, user_preferences, tracks, num_tracks=50)
-    '''
-    
-    
     try:
         familiar_tracks = [t for t in tracks if t.get('familiarity', 0) > 0.5]
         discovery_tracks = [t for t in tracks if t.get('familiarity', 0) <= 0.5]
@@ -182,32 +196,44 @@ def get_openai_recommendations(client, user_preferences, tracks, num_tracks=30):
         discovery_track_info = [f"{track['name']} by {', '.join([artist['name'] for artist in track['artists']])}" for track in discovery_tracks[:50]]
 
         prompt = f"""
-        Create a playlist in JSON format based on the following preferences:
-        - Current mood: {user_preferences['current_mood']}
-        - Desired mood: {user_preferences['desired_mood']}
+        As a music expert AI assistant, create a personalized playlist based on the following preferences:
+        - Current mood: {user_preferences['current_mood']} (0-100, where 0 is very negative and 100 is very positive)
+        - Desired mood: {user_preferences['desired_mood']} (0-100, same scale as current mood)
         - Activity: {user_preferences['activity']}
-        - Energy level: {user_preferences['energy_level']}
+        - Energy level: {user_preferences['energy_level']} (0-100, where 0 is very low energy and 100 is very high energy)
         - Time of day: {user_preferences['time_of_day']}
         - Discovery level: {user_preferences['discovery_level']} (0 = only familiar tracks, 1 = maximum discovery)
         - Playlist description: {user_preferences['playlist_description']}
 
-        Provide a list of {num_tracks} tracks that best match these preferences.
-        The response should be in the following format:
+        Consider the following aspects when creating the playlist:
+        1. Activity Interpretation: Analyze how the activity '{user_preferences['activity']}' might influence music preferences. Consider tempo, genre, and lyrical content that would be appropriate.
+        
+        2. Mood Progression: Design the playlist to gradually transition from the current mood ({user_preferences['current_mood']}) to the desired mood ({user_preferences['desired_mood']}). The song order should reflect this progression.
+        
+        3. Energy Level: Ensure the overall energy of the playlist matches the specified energy level of {user_preferences['energy_level']}. Consider factors like tempo, rhythm, and instrumental intensity.
+        
+        4. Time of Day: Adjust your recommendations to suit the specified time of day: {user_preferences['time_of_day']}. Think about how music preferences might change throughout the day.
+        
+        5. Discovery Balance: With a discovery level of {user_preferences['discovery_level']}, balance familiar tracks with new discoveries. Higher discovery levels should introduce more unfamiliar tracks.
+
+        Provide a list of {num_tracks} tracks that best match these preferences, considering both familiar and discovery tracks.
+        The response should be in the following JSON format:
 
         ```json
         {{
-            "playlist_description": "A brief description of the playlist",
+            "playlist_description": "A brief description of the playlist, explaining how it meets the user's preferences",
             "tracks": [
                 {{
                     "name": "Track Name",
-                    "artist": "Artist Name"
+                    "artist": "Artist Name",
+                    "reason": "A brief explanation of why this track was chosen and how it fits the playlist"
                 }},
                 ...
             ]
         }}
         ```
 
-        After the JSON, provide a brief explanation of why you chose these tracks, how they fit the user's preferences, and any other insights you'd like to share.
+        After the JSON, provide a brief explanation of your overall approach to creating this playlist, including how you balanced the various factors and any challenges you faced.
         """
 
         response = client.chat.completions.create(
@@ -225,27 +251,35 @@ def get_openai_recommendations(client, user_preferences, tracks, num_tracks=30):
 
 def get_user_profile(sp):
     try:
-        return make_spotify_request_with_retry(sp, 'current_user')
+        helper_logger.debug("Fetching user profile")
+        profile = sp.me()
+        helper_logger.debug(f"User profile fetched successfully: {profile['id']}")
+        return profile
     except Exception as e:
-        logger.error("Error fetching user profile: %s", e)
+        helper_logger.error(f"Error fetching user profile: {str(e)}")
         return None
 
-def get_user_top_artists(sp, limit=5):
+def get_user_top_artists(sp, limit=10):
     try:
-        top_artists = make_spotify_request_with_retry(sp, 'current_user_top_artists', limit=limit)
-        return [{"value": artist['name'], "name": artist['name']} for artist in top_artists['items']]
+        helper_logger.debug(f"Fetching user's top {limit} artists")
+        top_artists = sp.current_user_top_artists(limit=limit)
+        helper_logger.debug(f"Successfully fetched {len(top_artists['items'])} top artists")
+        return [{"name": artist['name'], "id": artist['id']} for artist in top_artists['items']]
     except Exception as e:
-        logger.error(f"Error fetching top artists: {e}")
+        helper_logger.error(f"Error fetching top artists: {str(e)}")
         return []
 
-def get_user_top_genres(sp, limit=5):
+def get_user_top_genres(sp, limit=10):
     try:
-        top_artists = make_spotify_request_with_retry(sp, 'current_user_top_artists', limit=50)
+        helper_logger.debug(f"Fetching user's top genres")
+        top_artists = sp.current_user_top_artists(limit=50)  # Fetch more artists to get a better genre spread
         genres = [genre for artist in top_artists['items'] for genre in artist['genres']]
-        unique_genres = list(set(genres))[:limit]
-        return [{"value": genre, "name": genre} for genre in unique_genres]
+        genre_counts = Counter(genres)
+        top_genres = [{"name": genre, "count": count} for genre, count in genre_counts.most_common(limit)]
+        helper_logger.debug(f"Successfully fetched {len(top_genres)} top genres")
+        return top_genres
     except Exception as e:
-        logger.error(f"Error fetching top genres: {e}")
+        helper_logger.error(f"Error fetching top genres: {str(e)}")
         return []
 
 def get_tracks_from_favorites(sp, favorite_artists, favorite_genres, limit=50):
@@ -330,9 +364,17 @@ def get_expanded_track_pool(sp, favorite_artists, favorite_genres, user_profile,
         all_tracks = list({track['id']: track for track in all_tracks}.values())
         logger.debug(f"Total tracks after deduplication: {len(all_tracks)}")
 
-        # Calculate discovery scores
-        for track in all_tracks:
-            track['discovery_score'] = calculate_discovery_score(track, user_profile, sp)
+        # Get audio features for all tracks
+        track_ids = [track['id'] for track in all_tracks]
+        audio_features = sp.audio_features(track_ids)
+
+        # Calculate discovery scores and analyze audio features
+        for track, features in zip(all_tracks, audio_features):
+            if features:
+                track['discovery_score'] = calculate_discovery_score(track, user_profile, sp)
+                track['audio_analysis'] = analyze_audio_features(features)
+            else:
+                logger.warning(f"No audio features found for track {track['id']}")
 
         # Sort tracks by discovery score
         sorted_tracks = sorted(all_tracks, key=lambda x: x['discovery_score'], reverse=True)
@@ -348,7 +390,6 @@ def get_expanded_track_pool(sp, favorite_artists, favorite_genres, user_profile,
     except Exception as e:
         logger.error(f"Error in get_expanded_track_pool: {str(e)}", exc_info=True)
         raise
-
 def parse_openai_response(response):
     logger.debug("Starting to parse OpenAI response")
     logger.debug(f"Raw OpenAI response: {response}")
@@ -448,6 +489,9 @@ def find_tracks_on_spotify(sp, recommended_tracks):
 from datetime import datetime, timedelta
 import random
 
+import random
+from datetime import datetime
+
 def get_wayback_tracks(sp, limit=5, max_recent_tracks=200, max_saved_tracks=500):
     """
     Retrieve tracks from the user's library that haven't been played recently.
@@ -458,6 +502,8 @@ def get_wayback_tracks(sp, limit=5, max_recent_tracks=200, max_saved_tracks=500)
     :param max_saved_tracks: Maximum number of saved tracks to fetch
     :return: List of "way back" tracks
     """
+    helper_logger.debug(f"Fetching 'Way Back' tracks. Limit: {limit}, Max recent: {max_recent_tracks}, Max saved: {max_saved_tracks}")
+
     # Get recently played tracks
     recent_tracks = []
     results = sp.current_user_recently_played(limit=50)
@@ -467,6 +513,7 @@ def get_wayback_tracks(sp, limit=5, max_recent_tracks=200, max_saved_tracks=500)
             results = sp.next(results)
         else:
             break
+    helper_logger.debug(f"Fetched {len(recent_tracks)} recent tracks")
 
     # Create a set of recently played track IDs
     recent_track_ids = {item['track']['id'] for item in recent_tracks}
@@ -480,12 +527,14 @@ def get_wayback_tracks(sp, limit=5, max_recent_tracks=200, max_saved_tracks=500)
             results = sp.next(results)
         else:
             break
+    helper_logger.debug(f"Fetched {len(saved_tracks)} saved tracks")
 
     # Find tracks that are saved but not recently played
     wayback_candidates = [
         track for track in saved_tracks
         if track['track']['id'] not in recent_track_ids
     ]
+    helper_logger.debug(f"Found {len(wayback_candidates)} wayback candidates")
 
     # Sort by date added (oldest first)
     wayback_candidates.sort(key=lambda x: x['added_at'])
@@ -495,7 +544,7 @@ def get_wayback_tracks(sp, limit=5, max_recent_tracks=200, max_saved_tracks=500)
     num_recent = min(limit - num_old, len(wayback_candidates) - num_old)
 
     old_tracks = wayback_candidates[:num_old]
-    recent_tracks = random.sample(wayback_candidates[num_old:], num_recent)
+    recent_tracks = random.sample(wayback_candidates[num_old:], num_recent) if num_recent > 0 else []
 
     wayback_tracks = old_tracks + recent_tracks
     random.shuffle(wayback_tracks)  # Shuffle to mix old and recent
@@ -505,7 +554,10 @@ def get_wayback_tracks(sp, limit=5, max_recent_tracks=200, max_saved_tracks=500)
         track['added_at_formatted'] = datetime.strptime(track['added_at'], "%Y-%m-%dT%H:%M:%SZ").strftime("%B %d, %Y")
         # You could add more track features here if needed
 
-    return wayback_tracks[:limit]
+    final_tracks = wayback_tracks[:limit]
+    helper_logger.debug(f"Returning {len(final_tracks)} 'Way Back' tracks")
+
+    return final_tracks
 
 def calculate_discovery_score(track, user_profile, sp):
     """
@@ -561,28 +613,88 @@ def calculate_discovery_score(track, user_profile, sp):
     return max(0, min(score, 1))
 
 
-def categorize_mood(audio_features):
+def analyze_audio_features(audio_features):
     """
-    Categorize the mood of a track based on its audio features.
+    Provide a comprehensive analysis of a track's audio features.
     
     :param audio_features: A dictionary of audio features from Spotify's API
-    :return: A string representing the mood category
+    :return: A dictionary containing various analyses of the track
     """
-    valence = audio_features['valence']
-    energy = audio_features['energy']
+    def calculate_happiness(features):
+        return (features['valence'] * 0.6 + features['energy'] * 0.4) * 100
+
+    def calculate_relaxation(features):
+        return ((1 - features['energy']) * 0.5 + features['acousticness'] * 0.3 + (1 - features['loudness'] / -60) * 0.2) * 100
+
+    def calculate_intensity(features):
+        return (features['energy'] * 0.4 + features['loudness'] / -60 * 0.3 + features['tempo'] / 200 * 0.3) * 100
+
+    def categorize_tempo(tempo):
+        if tempo < 60:
+            return "Very Slow"
+        elif 60 <= tempo < 90:
+            return "Slow"
+        elif 90 <= tempo < 120:
+            return "Moderate"
+        elif 120 <= tempo < 150:
+            return "Fast"
+        else:
+            return "Very Fast"
+
+    def suggest_activities(features):
+        activities = []
+        if features['danceability'] > 0.7:
+            activities.append("Dancing")
+        if features['energy'] > 0.8:
+            activities.append("Working Out")
+        if features['acousticness'] > 0.7:
+            activities.append("Relaxing")
+        if features['instrumentalness'] > 0.5:
+            activities.append("Studying")
+        if features['valence'] > 0.7:
+            activities.append("Partying")
+        if not activities:
+            activities.append("General Listening")
+        return activities
+
+    def suggest_time_of_day(features):
+        energy = features['energy']
+        valence = features['valence']
+        if energy > 0.7 and valence > 0.7:
+            return "Morning"
+        elif energy > 0.5 and valence > 0.5:
+            return "Afternoon"
+        elif energy < 0.4 and valence < 0.4:
+            return "Night"
+        else:
+            return "Evening"
+
+    return {
+        'mood_scores': {
+            'happiness': calculate_happiness(audio_features),
+            'energy': audio_features['energy'] * 100,
+            'relaxation': calculate_relaxation(audio_features),
+            'intensity': calculate_intensity(audio_features)
+        },
+        'suitable_activities': suggest_activities(audio_features),
+        'best_time_of_day': suggest_time_of_day(audio_features),
+        'danceability': audio_features['danceability'] * 100,
+        'acousticness': audio_features['acousticness'] * 100,
+        'instrumentalness': audio_features['instrumentalness'] * 100,
+        'tempo_category': categorize_tempo(audio_features['tempo']),
+        'tempo': audio_features['tempo'],
+        'key': audio_features['key'],
+        'mode': audio_features['mode'],
+        'time_signature': audio_features['time_signature']
+    }
     
-    if valence > 0.6 and energy > 0.6:
-        return 'Happy'
-    elif valence < 0.4 and energy < 0.4:
-        return 'Sad'
-    elif valence < 0.4 and energy > 0.6:
-        return 'Angry'
-    elif valence > 0.6 and energy < 0.4:
-        return 'Relaxed'
-    elif energy > 0.7:
-        return 'Energetic'
-    elif valence < 0.3:
-        return 'Melancholic'
-    else:
-        return 'Neutral'
+def get_user_profile(sp):
+    try:
+        logger.debug("Fetching user profile")
+        profile = sp.me()
+        logger.debug(f"User profile fetched successfully: {profile['id']}")
+        return profile
+    except Exception as e:
+        logger.error(f"Error fetching user profile: {str(e)}")
+        return None
 
