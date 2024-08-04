@@ -18,6 +18,15 @@ from openai import OpenAI
 from flask_wtf import FlaskForm
 from wtforms import StringField, HiddenField, IntegerField, TextAreaField, SubmitField, SelectField
 from wtforms.validators import DataRequired, NumberRange
+import time
+from datetime import datetime, timedelta
+import random
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+from spotipy.exceptions import SpotifyException
+import random
+from datetime import datetime, timedelta
+
+cache = {}
 
 # TODO: Break this function into smaller functions
 #  This is a low priority task that involves refactoring the backend code.
@@ -75,11 +84,18 @@ class PlaylistForm(FlaskForm):
     playlist_description = TextAreaField('Playlist Description')
     submit = SubmitField('Generate Playlist')
     
-import random
-from datetime import datetime, timedelta
 
-import random
-from datetime import datetime, timedelta
+
+
+
+def cached_request(key, ttl_seconds, fetch_function, *args, **kwargs):
+    current_time = time.time()
+    if key in cache and current_time - cache[key]['timestamp'] < ttl_seconds:
+        return cache[key]['data']
+    
+    data = fetch_function(*args, **kwargs)
+    cache[key] = {'data': data, 'timestamp': current_time}
+    return data
 
 def get_playlist_picks(sp, limit=10, max_playlist_age_days=365):
     """
@@ -93,99 +109,116 @@ def get_playlist_picks(sp, limit=10, max_playlist_age_days=365):
     helper_logger.debug(f"Fetching playlist picks. Limit: {limit}, Max age: {max_playlist_age_days} days")
     
     playlist_picks = []
-    playlists = sp.current_user_playlists(limit=50)['items']
-    helper_logger.debug(f"Fetched {len(playlists)} user playlists")
-    
-    # Filter and sort playlists
-    filtered_playlists = []
-    for playlist in playlists:
-        if playlist['tracks']['total'] == 0:
-            continue
+
+    def fetch_user_playlists():
+        helper_logger.debug("Fetching user playlists")
+        try:
+            playlists = make_spotify_request_with_retry(sp, 'current_user_playlists', limit=50)['items']
+            helper_logger.debug(f"Successfully fetched {len(playlists)} user playlists")
+            return playlists
+        except Exception as e:
+            helper_logger.error(f"Error fetching user playlists: {str(e)}")
+            raise
+
+    try:
+        playlists = cached_request('user_playlists', 3600, fetch_user_playlists)  # Cache for 1 hour
+        helper_logger.debug(f"Retrieved {len(playlists)} user playlists (from cache or fresh)")
         
-        playlist_tracks = sp.playlist_tracks(playlist['id'], fields='items.added_at', limit=1)
-        if playlist_tracks['items']:
-            added_at = datetime.strptime(playlist_tracks['items'][0]['added_at'], "%Y-%m-%dT%H:%M:%SZ")
-            if (datetime.utcnow() - added_at) <= timedelta(days=max_playlist_age_days):
-                filtered_playlists.append({
-                    'id': playlist['id'],
-                    'name': playlist['name'],
-                    'tracks_total': playlist['tracks']['total']
-                })
-    
-    helper_logger.debug(f"Filtered to {len(filtered_playlists)} playlists within age limit")
-    
-    # Sort playlists by number of tracks (ascending) to favor less populated playlists
-    filtered_playlists.sort(key=lambda x: x['tracks_total'])
-    
-    # Get tracks from playlists
-    for playlist in filtered_playlists:
-        if len(playlist_picks) >= limit:
-            break
+        # Filter and sort playlists
+        filtered_playlists = []
+        for playlist in playlists:
+            if playlist['tracks']['total'] == 0:
+                continue
+            
+            try:
+                playlist_tracks = make_spotify_request_with_retry(sp, 'playlist_tracks', playlist['id'], fields='items.added_at', limit=1)
+                if playlist_tracks['items']:
+                    added_at = datetime.strptime(playlist_tracks['items'][0]['added_at'], "%Y-%m-%dT%H:%M:%SZ")
+                    if (datetime.utcnow() - added_at) <= timedelta(days=max_playlist_age_days):
+                        filtered_playlists.append({
+                            'id': playlist['id'],
+                            'name': playlist['name'],
+                            'tracks_total': playlist['tracks']['total']
+                        })
+            except Exception as e:
+                helper_logger.error(f"Error processing playlist {playlist['id']}: {str(e)}")
         
-        offset = random.randint(0, max(0, playlist['tracks_total'] - 1))
-        tracks = sp.playlist_tracks(playlist['id'], limit=1, offset=offset)
+        helper_logger.debug(f"Filtered to {len(filtered_playlists)} playlists within age limit")
         
-        if tracks['items']:
-            track = tracks['items'][0]['track']
-            if track['preview_url']:
-                playlist_picks.append({
-                    'id': track['id'],
-                    'name': track['name'],
-                    'artists': [artist['name'] for artist in track['artists']],
-                    'preview_url': track['preview_url'],
-                    'playlist_name': playlist['name']
-                })
-    
-    helper_logger.debug(f"Fetched {len(playlist_picks)} tracks from filtered playlists")
-    
-    # If we don't have enough tracks, fill with random tracks from all playlists
-    while len(playlist_picks) < limit and playlists:
-        playlist = random.choice(playlists)
-        offset = random.randint(0, max(0, playlist['tracks']['total'] - 1))
-        tracks = sp.playlist_tracks(playlist['id'], limit=1, offset=offset)
+        # Sort playlists by number of tracks (ascending) to favor less populated playlists
+        filtered_playlists.sort(key=lambda x: x['tracks_total'])
         
-        if tracks['items']:
-            track = tracks['items'][0]['track']
-            if track['preview_url'] and not any(pick['id'] == track['id'] for pick in playlist_picks):
-                playlist_picks.append({
-                    'id': track['id'],
-                    'name': track['name'],
-                    'artists': [artist['name'] for artist in track['artists']],
-                    'preview_url': track['preview_url'],
-                    'playlist_name': playlist['name']
-                })
-    
-    helper_logger.debug(f"Final number of playlist picks: {len(playlist_picks)}")
+        # Get tracks from playlists
+        for playlist in filtered_playlists:
+            if len(playlist_picks) >= limit:
+                break
+            
+            try:
+                offset = random.randint(0, max(0, playlist['tracks_total'] - 1))
+                tracks = make_spotify_request_with_retry(sp, 'playlist_tracks', playlist['id'], limit=1, offset=offset)
+                
+                if tracks['items']:
+                    track = tracks['items'][0]['track']
+                    if track['preview_url']:
+                        playlist_picks.append({
+                            'id': track['id'],
+                            'name': track['name'],
+                            'artists': [artist['name'] for artist in track['artists']],
+                            'preview_url': track['preview_url'],
+                            'playlist_name': playlist['name']
+                        })
+            except Exception as e:
+                helper_logger.error(f"Error fetching tracks from playlist {playlist['id']}: {str(e)}")
+        
+        helper_logger.debug(f"Fetched {len(playlist_picks)} tracks from filtered playlists")
+        
+        # If we don't have enough tracks, fill with random tracks from all playlists
+        attempts = 0
+        while len(playlist_picks) < limit and playlists and attempts < 50:
+            attempts += 1
+            playlist = random.choice(playlists)
+            try:
+                offset = random.randint(0, max(0, playlist['tracks']['total'] - 1))
+                tracks = make_spotify_request_with_retry(sp, 'playlist_tracks', playlist['id'], limit=1, offset=offset)
+                
+                if tracks['items']:
+                    track = tracks['items'][0]['track']
+                    if track['preview_url'] and not any(pick['id'] == track['id'] for pick in playlist_picks):
+                        playlist_picks.append({
+                            'id': track['id'],
+                            'name': track['name'],
+                            'artists': [artist['name'] for artist in track['artists']],
+                            'preview_url': track['preview_url'],
+                            'playlist_name': playlist['name']
+                        })
+            except Exception as e:
+                helper_logger.error(f"Error fetching random track from playlist {playlist['id']}: {str(e)}")
+        
+        helper_logger.debug(f"Final number of playlist picks: {len(playlist_picks)}")
+
+    except Exception as e:
+        helper_logger.error(f"Unexpected error in get_playlist_picks: {str(e)}", exc_info=True)
+        return []
+
     return playlist_picks
 
-@retry(wait=wait_exponential(multiplier=1, min=4, max=60), stop=stop_after_attempt(5))
+
+@retry(
+    stop=stop_after_attempt(5),
+    wait=wait_exponential(multiplier=1, min=4, max=60),
+    retry=retry_if_exception_type(SpotifyException)
+)
 def make_spotify_request_with_retry(sp, method, *args, **kwargs):
-    """
-    Makes a request to the Spotify API with retry logic in case of rate limiting.
-
-    Args:
-        sp (Spotify): The Spotify object used to make the request.
-        method (str): The method to call on the Spotify object.
-        *args: Variable length argument list to be passed to the method.
-        **kwargs: Arbitrary keyword arguments to be passed to the method.
-
-    Raises:
-        SpotifyException: If an error occurs during the request.
-
-    Returns:
-        The result of the Spotify API request.
-
-    """
     try:
         return getattr(sp, method)(*args, **kwargs)
     except SpotifyException as e:
         if e.http_status == 429:
             retry_after = int(e.headers.get('Retry-After', 1))
-            logger.info(f"Rate limited. Waiting for {retry_after} seconds before retrying.")
+            helper_logger.warning(f"Rate limited. Waiting for {retry_after} seconds before retrying.")
             time.sleep(retry_after)
-            raise
-        else:
-            raise
+        helper_logger.error(f"Spotify API error: {e}")
+        raise
+
         
 def get_openai_recommendations(client, user_preferences, tracks, num_tracks=30):
     try:
@@ -286,11 +319,13 @@ def get_tracks_from_favorites(sp, favorite_artists, favorite_genres, limit=50):
     tracks = []
     try:
         for artist in favorite_artists:
-            results = make_spotify_request_with_retry(sp, 'search', q=f'artist:{artist["value"]}', type='track', limit=10)
-            tracks.extend(results['tracks']['items'])
+            results = make_spotify_request_with_retry(sp, 'search', q=f'artist:{artist}', type='track', limit=10)
+            if 'tracks' in results and 'items' in results['tracks']:
+                tracks.extend(results['tracks']['items'])
         for genre in favorite_genres:
-            results = make_spotify_request_with_retry(sp, 'search', q=f'genre:{genre["value"]}', type='track', limit=10)
-            tracks.extend(results['tracks']['items'])
+            results = make_spotify_request_with_retry(sp, 'search', q=f'genre:{genre}', type='track', limit=10)
+            if 'tracks' in results and 'items' in results['tracks']:
+                tracks.extend(results['tracks']['items'])
         logger.debug(f"Fetched {len(tracks)} tracks from favorites")
         return tracks[:limit]
     except Exception as e:
@@ -335,15 +370,16 @@ def get_new_artist_tracks(sp, limit=50):
         logger.error(f"Error in get_new_artist_tracks: {str(e)}", exc_info=True)
         return []
 
-def calculate_discovery_score(track, user_profile):
-    # Implement your discovery score calculation here
-    # For now, we'll just return a random score
-    return random.random()
+
 
 def get_expanded_track_pool(sp, favorite_artists, favorite_genres, user_profile, discovery_ratio=0.3):
     logger.debug(f"Starting get_expanded_track_pool with favorite_artists: {favorite_artists}, favorite_genres: {favorite_genres}")
 
     try:
+        # Ensure favorite_artists and favorite_genres are lists of strings
+        favorite_artists = [artist.strip() for artist in favorite_artists.split(',')] if isinstance(favorite_artists, str) else favorite_artists
+        favorite_genres = [genre.strip() for genre in favorite_genres.split(',')] if isinstance(favorite_genres, str) else favorite_genres
+
         familiar_tracks = get_tracks_from_favorites(sp, favorite_artists, favorite_genres)
         logger.debug(f"Tracks from favorites: {len(familiar_tracks)}")
 
@@ -366,30 +402,51 @@ def get_expanded_track_pool(sp, favorite_artists, favorite_genres, user_profile,
 
         # Get audio features for all tracks
         track_ids = [track['id'] for track in all_tracks]
-        audio_features = sp.audio_features(track_ids)
+        audio_features = []
+        
+        # Split track_ids into batches of 100 (Spotify API limit)
+        batch_size = 100
+        for i in range(0, len(track_ids), batch_size):
+            batch = track_ids[i:i+batch_size]
+            try:
+                batch_features = sp.audio_features(batch)
+                audio_features.extend(batch_features)
+                logger.debug(f"Fetched audio features for batch {i // batch_size + 1}")
+            except Exception as e:
+                logger.error(f"Error fetching audio features for batch {i // batch_size + 1}: {str(e)}")
 
         # Calculate discovery scores and analyze audio features
         for track, features in zip(all_tracks, audio_features):
             if features:
-                track['discovery_score'] = calculate_discovery_score(track, user_profile, sp)
-                track['audio_analysis'] = analyze_audio_features(features)
+                try:
+                    logger.debug(f"Calculating discovery score for track: {track.get('name', 'Unknown')} (ID: {track.get('id', 'Unknown')})")
+                    track['discovery_score'] = calculate_discovery_score(track, user_profile, sp)
+                    logger.debug(f"Discovery score calculated: {track['discovery_score']}")
+                    track['audio_analysis'] = analyze_audio_features(features)
+                except Exception as e:
+                    logger.error(f"Error calculating discovery score for track {track.get('id', 'Unknown')}: {str(e)}")
+                    track['discovery_score'] = 0.5  # Assign a neutral score if calculation fails
             else:
-                logger.warning(f"No audio features found for track {track['id']}")
+                logger.warning(f"No audio features found for track {track.get('id', 'Unknown')}")
+                track['discovery_score'] = 0.5  # Assign a neutral score if no features
 
         # Sort tracks by discovery score
-        sorted_tracks = sorted(all_tracks, key=lambda x: x['discovery_score'], reverse=True)
+        sorted_tracks = sorted(all_tracks, key=lambda x: x.get('discovery_score', 0), reverse=True)
 
+        # Split into familiar and discovery tracks
         split_index = int(len(sorted_tracks) * discovery_ratio)
         discovery_tracks = sorted_tracks[:split_index]
         familiar_tracks = sorted_tracks[split_index:]
 
-        logger.debug(f"Familiar tracks: {len(familiar_tracks)}, Discovery tracks: {len(discovery_tracks)}")
+        logger.debug(f"Final track pool - Familiar tracks: {len(familiar_tracks)}, Discovery tracks: {len(discovery_tracks)}")
 
         return familiar_tracks, discovery_tracks
 
     except Exception as e:
         logger.error(f"Error in get_expanded_track_pool: {str(e)}", exc_info=True)
         raise
+    
+    
 def parse_openai_response(response):
     logger.debug("Starting to parse OpenAI response")
     logger.debug(f"Raw OpenAI response: {response}")
@@ -568,50 +625,95 @@ def calculate_discovery_score(track, user_profile, sp):
     :param sp: Spotify client object
     :return: A discovery score between 0 and 1, where 1 is the most discoverable
     """
+    logger.debug(f"Calculating discovery score for track: {track.get('id', 'Unknown ID')}")
+    logger.debug(f"Track data: {track}")
+    logger.debug(f"User profile: {user_profile}")
+
     score = 0.5  # Start with a neutral score
 
     try:
         # Factor 1: Track popularity (less popular = more discoverable)
-        popularity = track.get('popularity', 50)
-        score += (100 - popularity) / 200  # Contributes up to 0.5 to the score
+        popularity = track.get('popularity')
+        if popularity is not None:
+            score += (100 - popularity) / 200
+            logger.debug(f"Adjusted score based on popularity: {score}")
+        else:
+            logger.warning("Track popularity is None")
 
         # Factor 2: Artist familiarity
-        artist_id = track['artists'][0]['id']
-        try:
-            artist_info = sp.artist(artist_id)
-            artist_popularity = artist_info['popularity']
-            score += (100 - artist_popularity) / 200  # Contributes up to 0.5 to the score
-        except:
-            pass  # If we can't get artist info, we'll skip this factor
+        if track.get('artists') and len(track['artists']) > 0:
+            artist_id = track['artists'][0].get('id')
+            if artist_id:
+                try:
+                    artist_info = sp.artist(artist_id)
+                    artist_popularity = artist_info.get('popularity')
+                    if artist_popularity is not None:
+                        score += (100 - artist_popularity) / 200
+                        logger.debug(f"Adjusted score based on artist popularity: {score}")
+                    else:
+                        logger.warning("Artist popularity is None")
+                except Exception as e:
+                    logger.warning(f"Error fetching artist info: {str(e)}")
+            else:
+                logger.warning("Artist ID is None")
+        else:
+            logger.warning("No artists information in track data")
 
         # Factor 3: Genre preference
-        user_top_genres = get_user_top_genres(sp, limit=50)
-        artist_genres = set(artist_info.get('genres', []))
-        genre_overlap = len(set(genre['name'] for genre in user_top_genres) & artist_genres)
-        score -= genre_overlap * 0.1  # Reduce score for each overlapping genre (max 0.5 reduction)
+        try:
+            user_top_genres = get_user_top_genres(sp, limit=50)
+            if track.get('artists') and track['artists']:
+                artist_id = track['artists'][0].get('id')
+                if artist_id:
+                    artist_info = sp.artist(artist_id)
+                    artist_genres = set(artist_info.get('genres', []))
+                    genre_overlap = len(set(genre['name'] for genre in user_top_genres) & artist_genres)
+                    score_adjustment = genre_overlap * 0.1
+                    score -= score_adjustment
+                    logger.debug(f"Adjusted score based on genre overlap: -{score_adjustment}")
+                else:
+                    logger.warning("Artist ID is None for genre check")
+            else:
+                logger.warning("No artists information for genre check")
+        except Exception as e:
+            logger.warning(f"Error in genre preference calculation: {str(e)}")
 
         # Factor 4: Recency of listening
-        recent_tracks = sp.current_user_recently_played(limit=50)
-        recent_track_ids = [item['track']['id'] for item in recent_tracks['items']]
-        if track['id'] in recent_track_ids:
-            score -= 0.3  # Significantly reduce score if recently played
+        try:
+            recent_tracks = sp.current_user_recently_played(limit=50)
+            recent_track_ids = [item['track']['id'] for item in recent_tracks['items'] if item.get('track')]
+            if track.get('id') in recent_track_ids:
+                score -= 0.3
+                logger.debug("Reduced score by 0.3 due to recent play")
+            else:
+                logger.debug("Track not in recently played")
+        except Exception as e:
+            logger.warning(f"Error fetching recently played tracks: {str(e)}")
 
         # Factor 5: Presence in user's playlists
-        user_playlists = sp.current_user_playlists(limit=50)
-        for playlist in user_playlists['items']:
-            if sp.playlist_tracks(playlist['id'])['items']:
-                playlist_track_ids = [item['track']['id'] for item in sp.playlist_tracks(playlist['id'])['items']]
-                if track['id'] in playlist_track_ids:
-                    score -= 0.2  # Reduce score if track is in user's playlist
-                    break  # No need to check other playlists
+        try:
+            user_playlists = sp.current_user_playlists(limit=50)
+            for playlist in user_playlists['items']:
+                if playlist.get('tracks', {}).get('total', 0) > 0:
+                    playlist_tracks = sp.playlist_tracks(playlist['id'])
+                    playlist_track_ids = [item['track']['id'] for item in playlist_tracks['items'] if item.get('track')]
+                    if track.get('id') in playlist_track_ids:
+                        score -= 0.2
+                        logger.debug("Reduced score by 0.2 due to presence in user playlist")
+                        break  # No need to check other playlists
+            else:
+                logger.debug("Track not found in user's playlists")
+        except Exception as e:
+            logger.warning(f"Error checking user playlists: {str(e)}")
 
     except Exception as e:
-        logger.error(f"Error calculating discovery score: {str(e)}")
+        logger.error(f"Error calculating discovery score: {str(e)}", exc_info=True)
         return 0.5  # Return neutral score if there's an error
 
     # Ensure the score is between 0 and 1
-    return max(0, min(score, 1))
-
+    final_score = max(0, min(score, 1))
+    logger.debug(f"Final discovery score: {final_score}")
+    return final_score
 
 def analyze_audio_features(audio_features):
     """

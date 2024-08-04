@@ -115,29 +115,15 @@ def login():
     app.logger.debug(f"Generated auth URL: {auth_url}")
     return redirect(auth_url)
 
-
 @app.route('/initial_form', methods=['GET', 'POST'])
 def initial_form():
-    """
-    Renders the initial form template and handles form submission.
-    Returns:
-        If the request method is 'POST' and the form is submitted and validated, redirects to 'load_user_preferences' route.
-        If the Spotify client is not available, redirects to 'login' route.
-        If the form is not submitted or validation fails, renders the initial form template with the form object.
-    """
-    app.logger.debug("Entering initial_form function")
-    
-    sp = get_spotify_client()
-    if not sp:
-        app.logger.warning("No Spotify client available in initial_form, redirecting to login")
-        flash('Please log in with Spotify to continue.', 'warning')
-        return redirect(url_for('login'))
+    app.logger.info("Entering initial_form function")
     
     form = PlaylistForm()
-    app.logger.debug("PlaylistForm created")
-
+    
     if request.method == 'POST':
         app.logger.debug("POST request received in initial_form")
+        app.logger.debug(f"Form data: {request.form}")
         if form.validate_on_submit():
             app.logger.debug("Form submitted and validated")
             try:
@@ -146,7 +132,7 @@ def initial_form():
                 num_tracks = round(duration_minutes / 3.5)
                 
                 # Process form data
-                session['form_data'] = {
+                form_data = {
                     'name': form.name.data,
                     'mood': form.mood.data,
                     'desired_mood': form.desired_mood.data,
@@ -160,15 +146,27 @@ def initial_form():
                     'favorite_genres': form.favorite_genres.data,
                     'playlist_description': form.playlist_description.data
                 }
-                app.logger.debug(f"Form data saved to session: {session['form_data']}")
-                app.logger.info("Redirecting to load_user_preferences")
-                return redirect(url_for('load_user_preferences'))
+                session['form_data'] = form_data
+                app.logger.debug(f"Form data saved to session: {form_data}")
+                
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    app.logger.debug("AJAX request detected, returning JSON response")
+                    return jsonify({"success": True, "message": "Form data received successfully"})
+                else:
+                    app.logger.info("Redirecting to load_user_preferences")
+                    return redirect(url_for('load_user_preferences'))
             except Exception as e:
                 app.logger.error(f"Error processing form data: {str(e)}", exc_info=True)
-                flash('An error occurred while processing your form. Please try again.', 'danger')
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return jsonify({"success": False, "message": "An error occurred while processing your form."}), 500
+                else:
+                    flash('An error occurred while processing your form. Please try again.', 'danger')
         else:
             app.logger.warning(f"Form validation failed. Errors: {form.errors}")
-            flash('Please correct the errors in the form and try again.', 'danger')
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({"success": False, "message": "Form validation failed", "errors": form.errors}), 400
+            else:
+                flash('Please correct the errors in the form and try again.', 'danger')
     
     app.logger.debug("Rendering initial form template")
     return render_template('initial_form.html', form=form)
@@ -344,14 +342,24 @@ def generate_playlist():
         initial_form_data = session.get('form_data', {})
         confirmed_preferences = session.get('confirmed_preferences', {})
 
+        logger.debug(f"Initial form data: {initial_form_data}")
+        logger.debug(f"Confirmed preferences: {confirmed_preferences}")
+
+        def safe_float(value, default=50.0):
+            try:
+                return float(value) if value != '' else default
+            except (ValueError, TypeError):
+                logger.warning(f"Could not convert {value} to float, using default {default}")
+                return default
+
         user_preferences = {
-            "current_mood": float(initial_form_data.get('mood', 50)),
-            "desired_mood": float(initial_form_data.get('desired_mood', 50)),
-            "activity": initial_form_data.get('activity'),
-            "energy_level": float(initial_form_data.get('energy_level', 50)),
-            "time_of_day": initial_form_data.get('time_of_day'),
-            "discovery_level": float(initial_form_data.get('discovery_level', 30)) / 100,
-            "playlist_description": initial_form_data.get('playlist_description'),
+            "current_mood": safe_float(initial_form_data.get('mood')),
+            "desired_mood": safe_float(initial_form_data.get('desired_mood')),
+            "activity": initial_form_data.get('activity', ''),
+            "energy_level": safe_float(initial_form_data.get('energy_level')),
+            "time_of_day": initial_form_data.get('time_of_day', ''),
+            "discovery_level": safe_float(initial_form_data.get('discovery_level', 30)) / 100,
+            "playlist_description": initial_form_data.get('playlist_description', ''),
             "selected_artists": confirmed_preferences.get('artists', []),
             "selected_genres": confirmed_preferences.get('genres', []),
             "selected_tracks": (
@@ -360,6 +368,8 @@ def generate_playlist():
                 confirmed_preferences.get('playlistPicks', [])
             )
         }
+
+        logger.debug(f"Processed user preferences: {user_preferences}")
 
         # Generate expanded track pool
         familiar_tracks, discovery_tracks = get_expanded_track_pool(
@@ -370,11 +380,7 @@ def generate_playlist():
             discovery_ratio=user_preferences['discovery_level']
         )
         
-        # Log sample tracks with audio analysis
-        if familiar_tracks:
-            logger.debug(f"Sample familiar track with audio analysis: {familiar_tracks[0]}")
-        if discovery_tracks:
-            logger.debug(f"Sample discovery track with audio analysis: {discovery_tracks[0]}")
+        logger.debug(f"Generated track pool - Familiar tracks: {len(familiar_tracks)}, Discovery tracks: {len(discovery_tracks)}")
 
         # Combine all tracks and remove duplicates
         all_tracks = familiar_tracks + discovery_tracks
@@ -396,7 +402,7 @@ def generate_playlist():
                 client, 
                 user_preferences, 
                 all_tracks, 
-                num_tracks=int(initial_form_data.get('duration', 30))
+                num_tracks=int(safe_float(initial_form_data.get('duration', 30)))
             )
             logger.debug(f"Raw OpenAI response: {openai_response}")
             
@@ -404,6 +410,29 @@ def generate_playlist():
             logger.error(f"Error getting OpenAI recommendations: {str(e)}", exc_info=True)
             flash('Error generating playlist recommendations. Please try again.', 'danger')
             return redirect(url_for('load_user_preferences'))
+
+        # Parse OpenAI response
+        recommended_tracks, ai_playlist_description, explanation = parse_openai_response(openai_response)
+
+        # Find tracks on Spotify
+        spotify_track_ids = find_tracks_on_spotify(sp, recommended_tracks)
+
+        # Store results in session
+        session['recommended_tracks'] = recommended_tracks
+        session['ai_playlist_description'] = ai_playlist_description
+        session['explanation'] = explanation
+        session['spotify_track_ids'] = spotify_track_ids
+
+        logger.info("Successfully generated playlist. Rendering preview.")
+        return render_template('playlist_preview.html',
+                               recommended_tracks=recommended_tracks,
+                               ai_playlist_description=ai_playlist_description,
+                               explanation=explanation)
+
+    except Exception as e:
+        logger.error(f"Unexpected error in generate_playlist: {str(e)}", exc_info=True)
+        flash('An unexpected error occurred. Please try again.', 'danger')
+        return redirect(url_for('load_user_preferences'))
 
         # Parse OpenAI response
         recommended_tracks, ai_playlist_description, explanation = parse_openai_response(openai_response)

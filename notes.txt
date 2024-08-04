@@ -1,5 +1,5 @@
 export FLASK_APP=main.py
-flask run -h 0.0.0.0 -p 8888
+flask run -h 0.0.0.0 -p 8888 --debug
 
 
 c. Fetch User's Spotify Data:
@@ -13,3 +13,6 @@ d. Get Recommendations:
 Calls select_seed_tracks() with top_tracks, recent_tracks, saved_tracks
 Calls get_spotify_recommendations() with seed_tracks and genre_preferences - is this going to get us enough tracks for a high discoverabbility score (you didn't mentionthat in summary)
 We need to change duration to minutes instead of num tracks
+
+
+grep -i 'error' logs/app.log > errors.log 
