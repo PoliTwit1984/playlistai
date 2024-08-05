@@ -46,3 +46,14 @@ grep -i 'error' logs/app.log > errors.log
 2024-08-04 18:40:03,261 - helpers - DEBUG - Fetching user's top genres
 2024-08-04 18:40:03,598 - helpers - DEBUG - Successfully fetched 33 top genres
 2024-08-04 18:40:03,711 - helpers - DEBUG - Adjusted score based on genre overlap: -0.6000000000000001
+
+
+
+
+Alternative Methods for Finding Relatable Music:
+
+Genre-based recommendations: Use the user's top genres to find similar tracks without relying on playlist data.
+Audio features: Utilize Spotify's audio features to find tracks with similar characteristics.
+Artist-based recommendations: Use the user's top artists to find similar artists and their tracks.
+Popularity-based recommendations: Include a mix of popular and less-known tracks within the user's preferred genres.
+Collaborative filtering: If possible, use data from users with similar tastes.

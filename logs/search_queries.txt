@@ -1,0 +1,93 @@
+Spotify Search Queries:
+
+Searching - Track: 'Drive My Car', Artist: 'The Beatles'
+FOUND - Track: 'Drive My Car - Remastered 2009', Artist: 'The Beatles', ID: 06ypiqmILMdVeaiErMFA91
+
+Searching - Track: 'Fast Car', Artist: 'Tracy Chapman'
+FOUND - Track: 'Fast Car', Artist: 'Tracy Chapman', ID: 2M9ro2krNb7nr7HSprkEgo
+
+Searching - Track: 'Start Me Up', Artist: 'The Rolling Stones'
+FOUND - Track: 'Start Me Up - Remastered 2009', Artist: 'The Rolling Stones', ID: 7HKez549fwJQDzx3zLjHKC
+
+Searching - Track: 'On the Road Again', Artist: 'Canned Heat'
+FOUND - Track: 'On the Road Again', Artist: 'Canned Heat', ID: 1t5iVh2otGTuDWvUeAQZSQ
+
+Searching - Track: 'Runaway (U & I)', Artist: 'Galantis'
+FOUND - Track: 'Runaway (U & I)', Artist: 'Galantis', ID: 46lFttIf5hnUZMGvjK0Wxo
+
+Searching - Track: 'Daylight', Artist: 'Matt and Kim'
+FOUND - Track: 'Daylight', Artist: 'Matt and Kim', ID: 57i3M29DWoo7RDk0Tf0LZG
+
+Searching - Track: 'Sweet Disposition', Artist: 'The Temper Trap'
+FOUND - Track: 'Sweet Disposition - John Summit & Silver Panda Remix', Artist: 'The Temper Trap', ID: 6rGf5AsEaVskU0pO2ewcUL
+
+Searching - Track: 'Mr. Brightside', Artist: 'The Killers'
+FOUND - Track: 'Mr. Brightside', Artist: 'The Killers', ID: 003vvx7Niy0yvhvHt4a68B
+
+Searching - Track: 'I Can't Tell You Why', Artist: 'Eagles'
+FOUND - Track: 'I Can't Tell You Why - 2013 Remaster', Artist: 'Eagles', ID: 02BsTeJE4q5gWOTt58ur5U
+
+Searching - Track: 'Wishlist', Artist: 'Pearl Jam'
+FOUND - Track: 'Wishlist', Artist: 'Pearl Jam', ID: 7hObovvcbBpXgZHQ9if4WU
+
+Searching - Track: 'She Drives Me Crazy', Artist: 'Fine Young Cannibals'
+FOUND - Track: 'She Drives Me Crazy', Artist: 'Fine Young Cannibals', ID: 4d6eqRtpDX7tydHJGDZUBQ
+
+Searching - Track: 'Beautiful Day', Artist: 'U2'
+FOUND - Track: 'Beautiful Day', Artist: 'U2', ID: 1VuBmEauSZywQVtqbxNqka
+
+Searching - Track: 'Gravity', Artist: 'John Mayer'
+FOUND - Track: 'Gravity', Artist: 'John Mayer', ID: 3SktMqZmo3M9zbB7oKMIF7
+
+Searching - Track: 'Drive', Artist: 'Incubus'
+FOUND - Track: 'Drive', Artist: 'Incubus', ID: 7nnWIPM5hwE3DaUBkvOIpy
+
+Searching - Track: 'Morning Drive', Artist: 'Chet Atkins'
+Relaxed search: Morning Drive Chet Atkins
+FOUND (Relaxed) - Track: 'Do I Ever Cross Your Mind', Artist: 'Chet Atkins', ID: 31xqbaSu7ozgcK8desDuMK
+
+Searching - Track: 'Highway to Hell', Artist: 'AC/DC'
+FOUND - Track: 'Highway to Hell', Artist: 'AC/DC', ID: 2zYzyRzz6pRmhPzyfMEC8s
+
+Searching - Track: 'Hit the Road Jack', Artist: 'Ray Charles'
+FOUND - Track: 'Hit the Road Jack', Artist: 'Ray Charles', ID: 5dUMh0ugelpKfoFp3qChuK
+
+Searching - Track: 'Cars', Artist: 'Gary Numan'
+FOUND - Track: 'Cars', Artist: 'Gary Numan', ID: 4QQEzkxcONBthDLfzqIh9S
+
+Searching - Track: 'Home', Artist: 'Edward Sharpe & The Magnetic Zeros'
+FOUND - Track: 'Home (2019 Remaster)', Artist: 'Edward Sharpe & The Magnetic Zeros', ID: 5uGXVcOINWmyUzpz0lKq7m
+
+Searching - Track: 'Keep the Car Running', Artist: 'Arcade Fire'
+FOUND - Track: 'Keep the Car Running', Artist: 'Arcade Fire', ID: 4KjdLo9JWJEKYoAJ8spkat
+
+Searching - Track: 'Driving Home For Christmas', Artist: 'Chris Rea'
+FOUND - Track: 'Driving Home for Christmas', Artist: 'Chris Rea', ID: 3Z3QhZAZpqwZa1phsbQ3JZ
+
+Searching - Track: 'Freeway of Love', Artist: 'Aretha Franklin'
+FOUND - Track: 'Freeway Of Love', Artist: 'Aretha Franklin', ID: 0lpIVCLNQRBKffcRRNrHyh
+
+Searching - Track: 'Shut Up and Drive', Artist: 'Rihanna'
+FOUND - Track: 'Shut Up And Drive', Artist: 'Rihanna', ID: 4QdX6pmNnJ5cleufWQIr5D
+
+Searching - Track: 'I Drove All Night', Artist: 'Cyndi Lauper'
+FOUND - Track: 'I Drove All Night', Artist: 'Cyndi Lauper', ID: 3J0AoQhAufniMrznCRJASD
+
+Searching - Track: 'Born to Run', Artist: 'Bruce Springsteen'
+FOUND - Track: 'Born to Run', Artist: 'Bruce Springsteen', ID: 6hTcuIQa0sxrrByu9wTD7s
+
+Searching - Track: 'A Head Full of Dreams', Artist: 'Coldplay'
+FOUND - Track: 'Adventure of a Lifetime', Artist: 'Coldplay', ID: 69uxyAqqPIsUyTO8txoP2M
+
+Searching - Track: 'Drive Safe', Artist: 'Rich Brian'
+FOUND - Track: 'Drive Safe', Artist: 'Rich Brian', ID: 6R7r9D8PQTijGlKbWgXhH7
+
+Searching - Track: 'Road To Nowhere', Artist: 'Talking Heads'
+FOUND - Track: 'Road to Nowhere', Artist: 'Talking Heads', ID: 5gS8whHdcpbkdz0qonQZF8
+
+Searching - Track: 'Thunder Road', Artist: 'Bruce Springsteen'
+FOUND - Track: 'Thunder Road - Live at Continental Airlines Arena, E. Rutherford, NJ - 7/18/1999', Artist: 'Bruce Springsteen', ID: 5uCMgAXazo4gjhv0fQl2Nq
+
+Searching - Track: 'Parentheses', Artist: 'The Antlers'
+FOUND - Track: 'Parentheses', Artist: 'The Antlers', ID: 1R18elwxudeetO2KQbMJLB
+

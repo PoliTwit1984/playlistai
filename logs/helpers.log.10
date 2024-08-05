@@ -1,0 +1,42 @@
+2024-08-05 04:52:41,619 - DEBUG - Adjusted score based on artist popularity: 0.6050000000000001
+2024-08-05 04:52:41,621 - DEBUG - Fetching user's top genres
+2024-08-05 04:52:41,621 - DEBUG - Calling Spotify method: current_user_top_artists
+2024-08-05 04:52:41,823 - DEBUG - Successfully fetched 33 top genres
+2024-08-05 04:52:41,823 - DEBUG - Calling Spotify method: artist
+2024-08-05 04:52:41,890 - DEBUG - Adjusted score based on genre overlap: -0.1
+2024-08-05 04:52:41,890 - DEBUG - Calling Spotify method: current_user_recently_played
+2024-08-05 04:52:42,098 - DEBUG - Final discovery score: 0.5050000000000001
+2024-08-05 04:52:42,099 - DEBUG - Discovery score calculated: 0.5050000000000001
+2024-08-05 04:52:42,099 - DEBUG - Calculating discovery score for track: Pink Skies (ID: 4ZJ4vzLQekI0WntDbanNC7)
+2024-08-05 04:52:42,099 - DEBUG - Calculating discovery score for track: 4ZJ4vzLQekI0WntDbanNC7
+2024-08-05 04:52:42,099 - DEBUG - Track data: {'album': {'album_type': 'single', 'artists': [{'external_urls': {'spotify': 'https://open.spotify.com/artist/40ZNYROS4zLfyyBSs2PGe2'}, 'href': 'https://api.spotify.com/v1/artists/40ZNYROS4zLfyyBSs2PGe2', 'id': '40ZNYROS4zLfyyBSs2PGe2', 'name': 'Zach Bryan', 'type': 'artist', 'uri': 'spotify:artist:40ZNYROS4zLfyyBSs2PGe2'}], 'external_urls': {'spotify': 'https://open.spotify.com/album/7LRZfujsTLyy814AnMSdtT'}, 'href': 'https://api.spotify.com/v1/albums/7LRZfujsTLyy814AnMSdtT', 'id': '7LRZfujsTLyy814AnMSdtT', 'images': [{'url': 'https://i.scdn.co/image/ab67616d0000b2731a2c9ac2d39bc5c2e22b9555', 'width': 640, 'height': 640}, {'url': 'https://i.scdn.co/image/ab67616d00001e021a2c9ac2d39bc5c2e22b9555', 'width': 300, 'height': 300}, {'url': 'https://i.scdn.co/image/ab67616d000048511a2c9ac2d39bc5c2e22b9555', 'width': 64, 'height': 64}], 'is_playable': True, 'name': 'Pink Skies', 'release_date': '2024-05-24', 'release_date_precision': 'day', 'total_tracks': 1, 'type': 'album', 'uri': 'spotify:album:7LRZfujsTLyy814AnMSdtT'}, 'artists': [{'external_urls': {'spotify': 'https://open.spotify.com/artist/40ZNYROS4zLfyyBSs2PGe2'}, 'href': 'https://api.spotify.com/v1/artists/40ZNYROS4zLfyyBSs2PGe2', 'id': '40ZNYROS4zLfyyBSs2PGe2', 'name': 'Zach Bryan', 'type': 'artist', 'uri': 'spotify:artist:40ZNYROS4zLfyyBSs2PGe2'}], 'disc_number': 1, 'duration_ms': 194920, 'explicit': False, 'external_ids': {'isrc': 'USWB12401947'}, 'external_urls': {'spotify': 'https://open.spotify.com/track/4ZJ4vzLQekI0WntDbanNC7'}, 'href': 'https://api.spotify.com/v1/tracks/4ZJ4vzLQekI0WntDbanNC7', 'id': '4ZJ4vzLQekI0WntDbanNC7', 'is_local': False, 'is_playable': True, 'name': 'Pink Skies', 'popularity': 88, 'preview_url': 'https://p.scdn.co/mp3-preview/21b3562e4483a8b6204f99a0614206b819378ef8?cid=79306a3149224e13bf26129de10b37b0', 'track_number': 1, 'type': 'track', 'uri': 'spotify:track:4ZJ4vzLQekI0WntDbanNC7'}
+2024-08-05 04:52:42,099 - DEBUG - User profile: {'display_name': 'Joe', 'external_urls': {'spotify': 'https://open.spotify.com/user/12939482'}, 'href': 'https://api.spotify.com/v1/users/12939482', 'id': '12939482', 'images': [{'url': 'https://i.scdn.co/image/ab67757000003b824e55c1645c4c81c525395175', 'height': 64, 'width': 64}, {'url': 'https://i.scdn.co/image/ab6775700000ee854e55c1645c4c81c525395175', 'height': 300, 'width': 300}], 'type': 'user', 'uri': 'spotify:user:12939482', 'followers': {'href': None, 'total': 2}, 'country': 'US', 'product': 'premium', 'explicit_content': {'filter_enabled': False, 'filter_locked': False}, 'email': 'joe.wilson@live.com'}
+2024-08-05 04:52:42,099 - DEBUG - Adjusted score based on popularity: 0.56
+2024-08-05 04:52:42,099 - DEBUG - Calling Spotify method: artist
+2024-08-05 04:52:42,172 - DEBUG - Adjusted score based on artist popularity: 0.6050000000000001
+2024-08-05 04:52:42,172 - DEBUG - Fetching user's top genres
+2024-08-05 04:52:42,172 - DEBUG - Calling Spotify method: current_user_top_artists
+2024-08-05 04:52:42,407 - DEBUG - Successfully fetched 33 top genres
+2024-08-05 04:52:42,408 - DEBUG - Calling Spotify method: artist
+2024-08-05 04:52:42,475 - DEBUG - Adjusted score based on genre overlap: -0.1
+2024-08-05 04:52:42,477 - DEBUG - Calling Spotify method: current_user_recently_played
+2024-08-05 04:52:42,686 - DEBUG - Final discovery score: 0.5050000000000001
+2024-08-05 04:52:42,687 - DEBUG - Discovery score calculated: 0.5050000000000001
+2024-08-05 04:52:42,687 - DEBUG - Calculating discovery score for track: Houdini (ID: 1CDQzbCz4KSQxHe7LMEgRM)
+2024-08-05 04:52:42,687 - DEBUG - Calculating discovery score for track: 1CDQzbCz4KSQxHe7LMEgRM
+2024-08-05 04:52:42,687 - DEBUG - Track data: {'album': {'album_type': 'album', 'artists': [{'external_urls': {'spotify': 'https://open.spotify.com/artist/7dGJo4pcD2V6oG8kP0tJRR'}, 'href': 'https://api.spotify.com/v1/artists/7dGJo4pcD2V6oG8kP0tJRR', 'id': '7dGJo4pcD2V6oG8kP0tJRR', 'name': 'Eminem', 'type': 'artist', 'uri': 'spotify:artist:7dGJo4pcD2V6oG8kP0tJRR'}], 'external_urls': {'spotify': 'https://open.spotify.com/album/3kjHLu1pL7tdY88GFwEkl6'}, 'href': 'https://api.spotify.com/v1/albums/3kjHLu1pL7tdY88GFwEkl6', 'id': '3kjHLu1pL7tdY88GFwEkl6', 'images': [{'url': 'https://i.scdn.co/image/ab67616d0000b2731633c43b5695735f7de36487', 'width': 640, 'height': 640}, {'url': 'https://i.scdn.co/image/ab67616d00001e021633c43b5695735f7de36487', 'width': 300, 'height': 300}, {'url': 'https://i.scdn.co/image/ab67616d000048511633c43b5695735f7de36487', 'width': 64, 'height': 64}], 'is_playable': True, 'name': 'The Death of Slim Shady (Coup De Grâce)', 'release_date': '2024-07-12', 'release_date_precision': 'day', 'total_tracks': 19, 'type': 'album', 'uri': 'spotify:album:3kjHLu1pL7tdY88GFwEkl6'}, 'artists': [{'external_urls': {'spotify': 'https://open.spotify.com/artist/7dGJo4pcD2V6oG8kP0tJRR'}, 'href': 'https://api.spotify.com/v1/artists/7dGJo4pcD2V6oG8kP0tJRR', 'id': '7dGJo4pcD2V6oG8kP0tJRR', 'name': 'Eminem', 'type': 'artist', 'uri': 'spotify:artist:7dGJo4pcD2V6oG8kP0tJRR'}], 'disc_number': 1, 'duration_ms': 227032, 'explicit': True, 'external_ids': {'isrc': 'USUG12403398'}, 'external_urls': {'spotify': 'https://open.spotify.com/track/1CDQzbCz4KSQxHe7LMEgRM'}, 'href': 'https://api.spotify.com/v1/tracks/1CDQzbCz4KSQxHe7LMEgRM', 'id': '1CDQzbCz4KSQxHe7LMEgRM', 'is_local': False, 'is_playable': True, 'name': 'Houdini', 'popularity': 84, 'preview_url': 'https://p.scdn.co/mp3-preview/778340223c0fe21545a7f2a9264ff39a54684913?cid=79306a3149224e13bf26129de10b37b0', 'track_number': 11, 'type': 'track', 'uri': 'spotify:track:1CDQzbCz4KSQxHe7LMEgRM'}
+2024-08-05 04:52:42,687 - DEBUG - User profile: {'display_name': 'Joe', 'external_urls': {'spotify': 'https://open.spotify.com/user/12939482'}, 'href': 'https://api.spotify.com/v1/users/12939482', 'id': '12939482', 'images': [{'url': 'https://i.scdn.co/image/ab67757000003b824e55c1645c4c81c525395175', 'height': 64, 'width': 64}, {'url': 'https://i.scdn.co/image/ab6775700000ee854e55c1645c4c81c525395175', 'height': 300, 'width': 300}], 'type': 'user', 'uri': 'spotify:user:12939482', 'followers': {'href': None, 'total': 2}, 'country': 'US', 'product': 'premium', 'explicit_content': {'filter_enabled': False, 'filter_locked': False}, 'email': 'joe.wilson@live.com'}
+2024-08-05 04:52:42,687 - DEBUG - Adjusted score based on popularity: 0.58
+2024-08-05 04:52:42,687 - DEBUG - Calling Spotify method: artist
+2024-08-05 04:52:42,744 - DEBUG - Adjusted score based on artist popularity: 0.61
+2024-08-05 04:52:42,744 - DEBUG - Fetching user's top genres
+2024-08-05 04:52:42,744 - DEBUG - Calling Spotify method: current_user_top_artists
+2024-08-05 04:52:43,032 - DEBUG - Successfully fetched 33 top genres
+2024-08-05 04:52:43,032 - DEBUG - Calling Spotify method: artist
+2024-08-05 04:52:43,089 - DEBUG - Adjusted score based on genre overlap: -0.30000000000000004
+2024-08-05 04:52:43,090 - DEBUG - Calling Spotify method: current_user_recently_played
+2024-08-05 04:52:43,546 - DEBUG - Reduced score by 0.3 due to recent play
+2024-08-05 04:52:43,546 - DEBUG - Final discovery score: 0.009999999999999953
+2024-08-05 04:52:43,546 - DEBUG - Discovery score calculated: 0.009999999999999953
+2024-08-05 04:52:43,546 - DEBUG - Calculating discovery score for track: Without Me (ID: 7lQ8MOhq6IN2w8EYcFNSUk)
+2024-08-05 04:52:43,546 - DEBUG - Calculating discovery score for track: 7lQ8MOhq6IN2w8EYcFNSUk

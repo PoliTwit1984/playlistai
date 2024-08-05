@@ -14,6 +14,7 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, SelectField, HiddenField, TextAreaField, IntegerField
 from wtforms.validators import DataRequired, NumberRange
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+from logging.handlers import RotatingFileHandler
 
 
 # Set up logging
@@ -33,22 +34,24 @@ logger = logging.getLogger(__name__)
 helper_logger = logging.getLogger('helpers')
 helper_logger.setLevel(logging.DEBUG)
 
+# Create logs directory if it doesn't exist
+if not os.path.exists('logs'):
+    os.makedirs('logs')
+
 # Create a file handler
-file_handler = logging.FileHandler('logs/helpers.log')
+file_handler = RotatingFileHandler('logs/helpers.log', maxBytes=10240, backupCount=10)
 file_handler.setLevel(logging.DEBUG)
 
-# Create a console handler
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.INFO)
-
 # Create a formatter
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 file_handler.setFormatter(formatter)
-console_handler.setFormatter(formatter)
 
-# Add the handlers to the logger
+# Add the handler to the logger
 helper_logger.addHandler(file_handler)
-helper_logger.addHandler(console_handler)
+
+
+
+
 
 # Cache to store API responses
 cache = {}
@@ -461,11 +464,19 @@ def get_expanded_track_pool(sp, favorite_artists, favorite_genres, user_profile,
             except Exception as e:
                 logger.error(f"Error fetching audio features for batch {i // batch_size + 1}: {str(e)}")
 
+        # Commented out playlist fetching
+        # user_playlists = sp.current_user_playlists(limit=50)
+        # playlist_track_ids = set()
+        # for playlist in user_playlists['items']:
+        #     if playlist.get('tracks', {}).get('total', 0) > 0:
+        #         playlist_tracks = sp.playlist_tracks(playlist['id'])
+        #         playlist_track_ids.update([item['track']['id'] for item in playlist_tracks['items'] if item.get('track')])
+
         for track, features in zip(all_tracks, audio_features):
             if features:
                 try:
                     logger.debug(f"Calculating discovery score for track: {track.get('name', 'Unknown')} (ID: {track.get('id', 'Unknown')})")
-                    track['discovery_score'] = calculate_discovery_score(track, user_profile, sp)
+                    track['discovery_score'] = calculate_discovery_score(track, user_profile, sp, set())  # Passing an empty set instead of playlist_track_ids
                     logger.debug(f"Discovery score calculated: {track['discovery_score']}")
                     track['audio_analysis'] = analyze_audio_features(features)
                 except Exception as e:
@@ -487,7 +498,6 @@ def get_expanded_track_pool(sp, favorite_artists, favorite_genres, user_profile,
     except Exception as e:
         logger.error(f"Error in get_expanded_track_pool: {str(e)}", exc_info=True)
         raise
-
 def parse_openai_response(response):
     """Parse the response from OpenAI to extract recommended tracks and explanations."""
     logger.debug("Starting to parse OpenAI response")
@@ -629,7 +639,7 @@ def get_wayback_tracks(sp, limit=5, max_recent_tracks=200, max_saved_tracks=500)
 
     return final_tracks
 
-def calculate_discovery_score(track, user_profile, sp):
+def calculate_discovery_score(track, user_profile, sp, playlist_track_ids):
     """Calculate a discovery score for a track based on the user's listening history and preferences."""
     logger.debug(f"Calculating discovery score for track: {track.get('id', 'Unknown ID')}")
     logger.debug(f"Track data: {track}")
@@ -678,18 +688,10 @@ def calculate_discovery_score(track, user_profile, sp):
         except Exception as e:
             logger.warning(f"Error fetching recently played tracks: {str(e)}")
 
-        try:
-            user_playlists = sp.current_user_playlists(limit=50)
-            for playlist in user_playlists['items']:
-                if playlist.get('tracks', {}).get('total', 0) > 0:
-                    playlist_tracks = sp.playlist_tracks(playlist['id'])
-                    playlist_track_ids = [item['track']['id'] for item in playlist_tracks['items'] if item.get('track')]
-                    if track.get('id') in playlist_track_ids:
-                        score -= 0.2
-                        logger.debug("Reduced score by 0.2 due to presence in user playlist")
-                        break
-        except Exception as e:
-            logger.warning(f"Error checking user playlists: {str(e)}")
+        # Commented out playlist check
+        # if track.get('id') in playlist_track_ids:
+        #     score -= 0.2
+        #     logger.debug("Reduced score by 0.2 due to presence in user playlist")
 
     except Exception as e:
         logger.error(f"Error calculating discovery score: {str(e)}", exc_info=True)
@@ -698,6 +700,8 @@ def calculate_discovery_score(track, user_profile, sp):
     final_score = max(0, min(score, 1))
     logger.debug(f"Final discovery score: {final_score}")
     return final_score
+
+
 
 def analyze_audio_features(audio_features):
     """Provide a comprehensive analysis of a track's audio features."""

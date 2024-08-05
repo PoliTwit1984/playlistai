@@ -10,6 +10,7 @@ from openai import OpenAI
 from datetime import datetime 
 import json
 import time
+from helpers import helper_logger
 
 from helpers import (
     PlaylistForm, get_user_profile, get_user_top_artists, get_user_top_genres,
@@ -35,6 +36,19 @@ sp_oauth = SpotifyOAuth(
     scope='user-library-read user-read-private user-read-email playlist-modify-private user-read-recently-played user-top-read user-read-currently-playing'
 )
 
+class SpotifyClientWrapper:
+    def __init__(self, client):
+        self._client = client
+
+    def __getattr__(self, name):
+        original_attr = getattr(self._client, name)
+        if callable(original_attr):
+            def wrapper(*args, **kwargs):
+                helper_logger.debug(f"Calling Spotify method: {name}")
+                return original_attr(*args, **kwargs)
+            return wrapper
+        return original_attr
+
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # Set up logging
@@ -58,35 +72,61 @@ def safe_float(value, default=50.0):
     except (ValueError, TypeError):
         logger.warning(f"Could not convert {value} to float, using default {default}")
         return default
+    
+def process_form_data_to_preferences(form_data):
+    return {
+        "current_mood": int(form_data.get('mood', 50)),
+        "desired_mood": int(form_data.get('desired_mood', 50)),
+        "activity": form_data.get('activity', ''),
+        "energy_level": int(form_data.get('energy_level', 50)),
+        "time_of_day": form_data.get('time_of_day', ''),
+        "discovery_level": int(form_data.get('discovery_level', 30)) / 100,
+        "playlist_description": form_data.get('playlist_description', ''),
+        "selected_artists": form_data.get('favorite_artists', '').split(','),
+        "selected_genres": form_data.get('favorite_genres', '').split(','),
+    }
 
-def get_spotify_client():
+def get_spotify_client(force_refresh=False):
     """Retrieve or refresh the Spotify client token and create a Spotify client."""
-    app.logger.debug("Entering get_spotify_client function")
+    helper_logger.debug("Entering get_spotify_client function")
     token_info = session.get('token_info', None)
     
     if not token_info:
-        app.logger.error("No token info found in session")
+        helper_logger.error("No token info found in session")
         return None
 
-    app.logger.debug(f"Token info found: {token_info}")
+    helper_logger.debug(f"Token info found: {token_info}")
 
-    # Check if token is about to expire
     now = int(time.time())
     is_token_expired = token_info['expires_at'] - now < 60
 
-    if is_token_expired:
-        app.logger.debug("Token is expired or about to expire, attempting to refresh")
+    if is_token_expired or force_refresh:
+        helper_logger.debug("Token is expired or force refresh requested, attempting to refresh")
         try:
             token_info = sp_oauth.refresh_access_token(token_info['refresh_token'])
             session['token_info'] = token_info
-            app.logger.debug("Token refreshed successfully")
+            helper_logger.debug("Token refreshed successfully")
         except Exception as e:
-            app.logger.error(f"Error refreshing token: {str(e)}")
+            helper_logger.error(f"Error refreshing token: {str(e)}")
             return None
 
     access_token = token_info['access_token']
-    app.logger.debug("Spotify client created successfully")
-    return spotipy.Spotify(auth=access_token)
+    helper_logger.debug(f"Spotify client created successfully. Token expires in {token_info['expires_at'] - now} seconds")
+    
+    # Create the Spotify client
+    sp = spotipy.Spotify(auth=access_token)
+    
+    # Log all available methods of the Spotify client
+    helper_logger.debug(f"Available Spotify client methods: {', '.join(dir(sp))}")
+    
+    # Check if there's a method related to playlists and log it
+    playlist_methods = [method for method in dir(sp) if 'playlist' in method.lower()]
+    helper_logger.debug(f"Playlist-related methods: {', '.join(playlist_methods)}")
+    
+    
+    return SpotifyClientWrapper(spotipy.Spotify(auth=access_token))
+    
+
 
 @app.route('/')
 def index():
@@ -138,10 +178,11 @@ def refresh_token():
     except Exception as e:
         app.logger.error(f"Error refreshing token: {str(e)}")
         return jsonify({"error": f"Error refreshing token: {str(e)}"}), 500
+    
+
 
 @app.route('/initial_form', methods=['GET', 'POST'])
 def initial_form():
-    """Render and handle the initial playlist form."""
     app.logger.info("Entering initial_form function")
     
     form = PlaylistForm()
@@ -156,17 +197,17 @@ def initial_form():
                 session['form_data'] = form_data
                 app.logger.debug(f"Form data saved to session: {form_data}")
                 
-                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                    app.logger.debug("AJAX request detected, returning JSON response")
-                    return jsonify({"success": True, "message": "Form data received successfully"})
-                else:
-                    app.logger.info("Redirecting to load_user_preferences")
-                    return redirect(url_for('load_user_preferences'))
+                # Clear any existing track pool or user preferences
+                session.pop('track_pool', None)
+                session.pop('user_preferences', None)
+                
+                return jsonify({"success": True, "redirect": url_for('load_user_preferences')})
             except Exception as e:
                 app.logger.error(f"Error processing form data: {str(e)}", exc_info=True)
-                handle_form_error(e, form)
+                return jsonify({"success": False, "message": str(e)}), 500
         else:
-            handle_form_validation_failure(form)
+            app.logger.warning(f"Form validation failed. Errors: {form.errors}")
+            return jsonify({"success": False, "message": "Form validation failed", "errors": form.errors}), 400
     
     app.logger.debug("Rendering initial form template")
     return render_template('initial_form.html', form=form)
@@ -229,6 +270,11 @@ def load_user_preferences():
         form_data = session.get('form_data', {})
         app.logger.debug(f"Retrieved form data from session: {form_data}")
 
+        if not form_data:
+            app.logger.error("Missing form data in session")
+            flash('Missing form data. Please fill out the form again.', 'warning')
+            return redirect(url_for('initial_form'))
+
         # Get user profile
         user_profile = get_user_profile(sp)
         app.logger.debug(f"User profile retrieved: {user_profile}")
@@ -250,14 +296,6 @@ def load_user_preferences():
         # Get Playlist Picks
         playlist_picks = get_playlist_picks(sp, limit=10)
         app.logger.debug(f"Playlist picks retrieved: {len(playlist_picks)}")
-
-        # Store all fetched tracks in the session
-        session['top_artists'] = top_artists
-        session['top_genres'] = top_genres
-        session['recent_tracks'] = recent_tracks
-        session['wayback_tracks'] = wayback_tracks
-        session['playlist_picks'] = playlist_picks
-        app.logger.debug("All track data stored in session")
 
         return render_template('user_preferences.html',
                                user_profile=user_profile,
@@ -341,106 +379,136 @@ def autocomplete_genre():
         logger.error(f"Error in genre autocomplete: {e}")
         return jsonify([])
     
-@app.route('/debug_track_pool', methods=['POST'])
-def debug_track_pool():
-    """Debug function to run get_expanded_track_pool and dump results to a log file."""
-    logger.info("Entering debug_track_pool function")
-    try:
-        sp = get_spotify_client()
-        if not sp:
-            logger.error("Failed to get Spotify client")
-            return jsonify({"success": False, "message": "Unable to authenticate with Spotify"}), 400
+# @app.route('/debug_track_pool', methods=['POST'])
+# def debug_track_pool():
+#     """Debug function to run get_expanded_track_pool and dump results to a log file."""
+#     helper_logger.info("Entering debug_track_pool function")
+#     try:
+#         helper_logger.debug("Attempting to get Spotify client")
+#         sp = get_spotify_client(force_refresh=True)
+#         if not sp:
+#             helper_logger.error("Failed to get Spotify client")
+#             return jsonify({"success": False, "message": "Unable to authenticate with Spotify"}), 400
 
-        initial_form_data = session.get('form_data', {})
-        confirmed_preferences = session.get('confirmed_preferences', {})
+#         helper_logger.debug("Got Spotify client successfully")
 
-        user_preferences = process_user_preferences(initial_form_data, confirmed_preferences)
+#         initial_form_data = session.get('form_data', {})
+#         confirmed_preferences = session.get('confirmed_preferences', {})
 
-        familiar_tracks, discovery_tracks = get_expanded_track_pool(
-            sp, 
-            user_preferences['selected_artists'], 
-            user_preferences['selected_genres'], 
-            sp.me(),
-            discovery_ratio=user_preferences['discovery_level']
-        )
+#         helper_logger.debug(f"Initial form data: {initial_form_data}")
+#         helper_logger.debug(f"Confirmed preferences: {confirmed_preferences}")
+
+#         user_preferences = process_user_preferences(initial_form_data, confirmed_preferences)
+#         helper_logger.debug(f"Processed user preferences: {user_preferences}")
+
+#         helper_logger.debug("Calling get_expanded_track_pool")
+#         familiar_tracks, discovery_tracks = get_expanded_track_pool(
+#             sp, 
+#             user_preferences['selected_artists'], 
+#             user_preferences['selected_genres'], 
+#             sp.me(),
+#             discovery_ratio=user_preferences['discovery_level']
+#         )
         
-        # Prepare data for logging
-        debug_data = {
-            "familiar_tracks": familiar_tracks,
-            "discovery_tracks": discovery_tracks,
-            "user_preferences": user_preferences
-        }
+#         helper_logger.debug(f"Got {len(familiar_tracks)} familiar tracks and {len(discovery_tracks)} discovery tracks")
 
-        # Generate a filename with timestamp
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"logs/track_pool_debug_{timestamp}.json"
+#         # Prepare data for logging
+#         debug_data = {
+#             "familiar_tracks": familiar_tracks,
+#             "discovery_tracks": discovery_tracks,
+#             "user_preferences": user_preferences
+#         }
 
-        # Dump the debug data to a file
-        with open(filename, 'w') as f:
-            json.dump(debug_data, f, indent=2, default=str)
+#         # Generate a filename with timestamp
+#         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+#         filename = f"logs/track_pool_debug_{timestamp}.json"
 
-        logger.info(f"Track pool debug data dumped to {filename}")
-        return jsonify({"success": True, "message": f"Debug data dumped to {filename}"})
+#         helper_logger.info(f"Dumping debug data to {filename}")
+#         # Dump the debug data to a file
+#         with open(filename, 'w') as f:
+#             json.dump(debug_data, f, indent=2, default=str)
 
-    except Exception as e:
-        logger.error(f"Unexpected error in debug_track_pool: {str(e)}", exc_info=True)
-        return jsonify({"success": False, "message": str(e)}), 500
-    
+#         helper_logger.info("Debug data dumped successfully")
+#         return jsonify({"success": True, "message": f"Debug data dumped to {filename}"})
+
+#     except Exception as e:
+#         helper_logger.error(f"Unexpected error in debug_track_pool: {str(e)}", exc_info=True)
+#         return jsonify({"success": False, "message": str(e)}), 500
 
 @app.route('/generate_playlist', methods=['GET'])
 def generate_playlist():
-    """Generate a playlist based on user preferences and OpenAI recommendations."""
-    logger.info("Entering generate_playlist function")
+    helper_logger.info("Entering generate_playlist function")
     try:
         sp = get_spotify_client()
+        helper_logger.debug("Spotify client obtained")
         if not sp:
-            logger.error("Failed to get Spotify client")
+            helper_logger.error("Failed to get Spotify client")
             flash('Unable to authenticate with Spotify', 'danger')
             return redirect(url_for('index'))
 
-        initial_form_data = session.get('form_data', {})
-        confirmed_preferences = session.get('confirmed_preferences', {})
-        all_tracks = session.get('track_pool', [])
+        # Retrieve track pool and preferences from session
+        track_pool = session.get('track_pool', {})
+        user_preferences = session.get('user_preferences', {})
+        form_data = session.get('form_data', {})
 
-        logger.debug(f"Initial form data: {initial_form_data}")
-        logger.debug(f"Confirmed preferences: {confirmed_preferences}")
-        logger.debug(f"Track pool size: {len(all_tracks)}")
+        helper_logger.debug(f"Track pool size: {len(track_pool)}")
+        helper_logger.debug(f"User preferences: {user_preferences}")
+        helper_logger.debug(f"Form data: {form_data}")
 
-        user_preferences = process_user_preferences(initial_form_data, confirmed_preferences)
+        if not track_pool or (not user_preferences and not form_data):
+            helper_logger.error("Missing track pool or user preferences in session")
+            flash('Missing required data. Please fill out the form again.', 'warning')
+            return redirect(url_for('initial_form'))
 
-        try:
-            openai_response = get_openai_recommendations(
-                client, 
-                user_preferences, 
-                all_tracks, 
-                num_tracks=int(safe_float(initial_form_data.get('duration', 30)))
-            )
-            logger.debug(f"Raw OpenAI response: {openai_response}")
-            
-        except Exception as e:
-            logger.error(f"Error getting OpenAI recommendations: {str(e)}", exc_info=True)
-            flash('Error generating playlist recommendations. Please try again.', 'danger')
+        # If user_preferences is empty, try to use form_data
+        if not user_preferences and form_data:
+            user_preferences = process_form_data_to_preferences(form_data)
+            session['user_preferences'] = user_preferences
+            helper_logger.debug(f"Processed user preferences from form data: {user_preferences}")
+
+        helper_logger.debug("Calling get_openai_recommendations")
+        openai_response = get_openai_recommendations(client, user_preferences, track_pool, num_tracks=30)
+        helper_logger.debug(f"OpenAI response received: {openai_response[:100]}...")  # Log first 100 chars
+
+        helper_logger.debug("Parsing OpenAI response")
+        recommended_tracks, ai_playlist_description, explanation = parse_openai_response(openai_response)
+        helper_logger.debug(f"Parsed {len(recommended_tracks)} recommended tracks")
+
+        if not recommended_tracks:
+            helper_logger.warning("No recommended tracks generated")
+            flash('No tracks were generated. Please try again with different preferences.', 'warning')
             return redirect(url_for('load_user_preferences'))
 
-        recommended_tracks, ai_playlist_description, explanation = parse_openai_response(openai_response)
+        helper_logger.debug("Finding tracks on Spotify")
         spotify_track_ids = find_tracks_on_spotify(sp, recommended_tracks)
+        helper_logger.debug(f"Found {len(spotify_track_ids)} track IDs on Spotify")
 
+        # Store results in session
         session['recommended_tracks'] = recommended_tracks
         session['ai_playlist_description'] = ai_playlist_description
         session['explanation'] = explanation
         session['spotify_track_ids'] = spotify_track_ids
 
-        logger.info("Successfully generated playlist. Rendering preview.")
-        return render_template('playlist_preview.html',
-                               recommended_tracks=recommended_tracks,
-                               ai_playlist_description=ai_playlist_description,
-                               explanation=explanation)
+        helper_logger.debug(f"Recommended tracks: {recommended_tracks[:2]}...")  # Log first 2 tracks
+        helper_logger.debug(f"AI Playlist description: {ai_playlist_description[:100]}...")
+        helper_logger.debug(f"Explanation: {explanation[:100]}...")
+
+        helper_logger.info("Successfully generated playlist. Rendering preview.")
+        try:
+            return render_template('playlist_preview.html',
+                                   recommended_tracks=recommended_tracks,
+                                   ai_playlist_description=ai_playlist_description,
+                                   explanation=explanation)
+        except Exception as e:
+            helper_logger.error(f"Error rendering template: {str(e)}", exc_info=True)
+            flash('An error occurred while generating the playlist preview. Please try again.', 'danger')
+            return redirect(url_for('load_user_preferences'))
 
     except Exception as e:
-        logger.error(f"Unexpected error in generate_playlist: {str(e)}", exc_info=True)
+        helper_logger.error(f"Unexpected error in generate_playlist: {str(e)}", exc_info=True)
         flash('An unexpected error occurred. Please try again.', 'danger')
-        return redirect(url_for('load_user_preferences'))
-
+        return redirect(url_for('initial_form'))
+    
 @app.route('/confirm_preferences', methods=['POST'])
 def confirm_preferences():
     """Confirm user preferences and store them in session."""
@@ -479,46 +547,51 @@ def dump_session_data():
         return jsonify({"success": False, "message": str(e)}), 500
     
     
-@app.route('/prepare_track_pool', methods=['GET'])
+@app.route('/prepare_track_pool', methods=['POST'])
 def prepare_track_pool():
-    """Prepare the track pool based on user preferences."""
-    logger.info("Entering prepare_track_pool function")
+    helper_logger.info("Entering prepare_track_pool function")
     try:
         sp = get_spotify_client()
         if not sp:
-            logger.error("Failed to get Spotify client")
+            helper_logger.error("Failed to get Spotify client")
             flash('Unable to authenticate with Spotify', 'danger')
             return redirect(url_for('index'))
 
-        initial_form_data = session.get('form_data', {})
-        confirmed_preferences = session.get('confirmed_preferences', {})
+        form_data = session.get('form_data', {})
+        if not form_data:
+            helper_logger.error("Missing form data in session")
+            flash('Missing form data. Please fill out the form again.', 'warning')
+            return redirect(url_for('initial_form'))
 
-        logger.debug(f"Initial form data: {initial_form_data}")
-        logger.debug(f"Confirmed preferences: {confirmed_preferences}")
+        # Update form_data with user selections from the preferences page
+        form_data.update(request.form)
+        session['form_data'] = form_data
 
-        user_preferences = process_user_preferences(initial_form_data, confirmed_preferences)
+        user_preferences = process_form_data_to_preferences(form_data)
+        session['user_preferences'] = user_preferences
 
+        # Get user profile
+        user_profile = get_user_profile(sp)
+
+        # Prepare track pool
         familiar_tracks, discovery_tracks = get_expanded_track_pool(
-            sp, 
-            user_preferences['selected_artists'], 
-            user_preferences['selected_genres'], 
-            sp.me(),
+            sp,
+            user_preferences['selected_artists'],
+            user_preferences['selected_genres'],
+            user_profile,
             discovery_ratio=user_preferences['discovery_level']
         )
-        
-        logger.debug(f"Generated track pool - Familiar tracks: {len(familiar_tracks)}, Discovery tracks: {len(discovery_tracks)}")
 
-        all_tracks = combine_and_deduplicate_tracks(familiar_tracks, discovery_tracks, user_preferences['discovery_level'])
+        track_pool = familiar_tracks + discovery_tracks
+        session['track_pool'] = track_pool
 
-        session['track_pool'] = all_tracks
-        logger.info("Track pool prepared and stored in session")
-
+        helper_logger.debug(f"Prepared track pool with {len(track_pool)} tracks")
         return redirect(url_for('generate_playlist'))
 
     except Exception as e:
-        logger.error(f"Unexpected error in prepare_track_pool: {str(e)}", exc_info=True)
+        helper_logger.error(f"Error in prepare_track_pool: {str(e)}", exc_info=True)
         flash('An error occurred while preparing the track pool. Please try again.', 'danger')
-        return redirect(url_for('load_user_preferences'))
+        return redirect(url_for('initial_form'))
 
 
 def process_form_data(form):

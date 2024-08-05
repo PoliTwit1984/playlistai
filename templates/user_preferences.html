@@ -83,134 +83,142 @@
     <div class="container">
         <h1>Your Spotify Insights</h1>
 
-        <div class="section current-preferences">
-            <h2>Your Current Preferences</h2>
-            <ul>
-                <li><strong>Name:</strong> {{ form_data.get('name', 'Not specified') }}</li>
-                <li><strong>Mood:</strong> {{ form_data.get('mood', 'Not specified') }}</li>
-                <li><strong>Desired Mood:</strong> {{ form_data.get('desired_mood', 'Not specified') }}</li>
-                <li><strong>Activity:</strong> {{ form_data.get('activity', 'Not specified') }}</li>
-                <li><strong>Energy Level:</strong> {{ form_data.get('energy_level', 'Not specified') }}</li>
-                <li><strong>Time of Day:</strong> {{ form_data.get('time_of_day', 'Not specified') }}</li>
-                <li><strong>Duration:</strong> {{ form_data.get('duration', 'Not specified') }}</li>
-                <li><strong>Discovery Level:</strong> {{ form_data.get('discovery_level', 'Not specified') }}</li>
-                <li><strong>Favorite Artists:</strong> {{ form_data.get('favorite_artists', 'Not specified') }}</li>
-                <li><strong>Favorite Genres:</strong> {{ form_data.get('favorite_genres', 'Not specified') }}</li>
-                <li><strong>Playlist Description:</strong> {{ form_data.get('playlist_description', 'Not specified') }}</li>
-            </ul>
-        </div>
-
-        <div class="section">
-            <h2>Your Top Artists</h2>
-            <input type="text" class="search-input" data-category="artist" placeholder="Search artists...">
-            <button id="toggleAllArtists">Toggle All</button>
-            <span id="artistsCount">0</span> selected
-            <div class="checkbox-list">
-                {% for artist in top_artists %}
-                <div class="checkbox-item artist-item">
-                    <input type="checkbox" id="artist-{{ artist.id }}" name="selected_artists" value="{{ artist.id }}">
-                    <label for="artist-{{ artist.id }}">{{ artist.name }}</label>
-                </div>
-                {% endfor %}
+        <form action="{{ url_for('prepare_track_pool') }}" method="post" id="preferencesForm">
+            <div class="section current-preferences">
+                <h2>Your Current Preferences</h2>
+                <ul>
+                    <li><strong>Name:</strong> {{ form_data.get('name', 'Not specified') }}</li>
+                    <li><strong>Mood:</strong> {{ form_data.get('mood', 'Not specified') }}</li>
+                    <li><strong>Desired Mood:</strong> {{ form_data.get('desired_mood', 'Not specified') }}</li>
+                    <li><strong>Activity:</strong> {{ form_data.get('activity', 'Not specified') }}</li>
+                    <li><strong>Energy Level:</strong> {{ form_data.get('energy_level', 'Not specified') }}</li>
+                    <li><strong>Time of Day:</strong> {{ form_data.get('time_of_day', 'Not specified') }}</li>
+                    <li><strong>Duration:</strong> {{ form_data.get('duration', 'Not specified') }}</li>
+                    <li><strong>Discovery Level:</strong> {{ form_data.get('discovery_level', 'Not specified') }}</li>
+                    <li><strong>Favorite Artists:</strong> {{ form_data.get('favorite_artists', 'Not specified') }}</li>
+                    <li><strong>Favorite Genres:</strong> {{ form_data.get('favorite_genres', 'Not specified') }}</li>
+                    <li><strong>Playlist Description:</strong> {{ form_data.get('playlist_description', 'Not specified') }}</li>
+                </ul>
+                <input type="hidden" name="mood" value="{{ form_data.get('mood', '') }}">
+                <input type="hidden" name="desired_mood" value="{{ form_data.get('desired_mood', '') }}">
+                <input type="hidden" name="activity" value="{{ form_data.get('activity', '') }}">
+                <input type="hidden" name="energy_level" value="{{ form_data.get('energy_level', '') }}">
+                <input type="hidden" name="time_of_day" value="{{ form_data.get('time_of_day', '') }}">
+                <input type="hidden" name="duration" value="{{ form_data.get('duration', '') }}">
+                <input type="hidden" name="discovery_level" value="{{ form_data.get('discovery_level', '') }}">
+                <input type="hidden" name="playlist_description" value="{{ form_data.get('playlist_description', '') }}">
             </div>
-        </div>
 
-        <div class="section">
-            <h2>Your Top Genres</h2>
-            <input type="text" class="search-input" data-category="genre" placeholder="Search genres...">
-            <button id="toggleAllGenres">Toggle All</button>
-            <span id="genresCount">0</span> selected
-            <div class="checkbox-list">
-                {% for genre in top_genres %}
-                <div class="checkbox-item genre-item">
-                    <input type="checkbox" id="genre-{{ loop.index }}" name="selected_genres" value="{{ genre.name }}">
-                    <label for="genre-{{ loop.index }}">{{ genre.name }}</label>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-
-        <div class="section">
-            <h2>Recently Played Tracks</h2>
-            <input type="text" class="search-input" data-category="recent_track" placeholder="Search recent tracks...">
-            <button id="toggleAllRecentTracks">Toggle All</button>
-            <span id="recent_tracksCount">0</span> selected
-            <div class="track-list">
-                {% for item in recent_tracks %}
-                <div class="checkbox-item recent_track-item">
-                    <input type="checkbox" id="recent-{{ item.track.id }}" name="selected_recent_tracks" value="{{ item.track.id }}">
-                    <label for="recent-{{ item.track.id }}">{{ item.track.name }} - {{ item.track.artists[0].name }}</label>
-                    {% if item.track.preview_url %}
-                    <div class="audio-preview">
-                        <audio src="{{ item.track.preview_url }}"></audio>
-                        <button class="play-pause-btn">Play</button>
+            <div class="section">
+                <h2>Your Top Artists</h2>
+                <input type="text" class="search-input" data-category="artist" placeholder="Search artists...">
+                <button type="button" id="toggleAllArtists">Toggle All</button>
+                <span id="artistsCount">0</span> selected
+                <div class="checkbox-list">
+                    {% for artist in top_artists %}
+                    <div class="checkbox-item artist-item">
+                        <input type="checkbox" id="artist-{{ artist.id }}" name="selected_artists" value="{{ artist.id }}">
+                        <label for="artist-{{ artist.id }}">{{ artist.name }}</label>
                     </div>
-                    {% endif %}
+                    {% endfor %}
                 </div>
-                {% endfor %}
             </div>
-        </div>
 
-        <div class="section wayback-machine">
-            <h2>The Way Back Machine</h2>
-            <p>Remember these forgotten gems from your library?</p>
-            <input type="text" class="search-input" data-category="wayback_track" placeholder="Search wayback tracks...">
-            <button id="toggleAllWaybackTracks">Toggle All</button>
-            <span id="wayback_tracksCount">0</span> selected
-            <div class="track-list">
-                {% for track in wayback_tracks %}
-                <div class="checkbox-item wayback_track-item">
-                    <input type="checkbox" id="wayback-{{ track.track.id }}" name="selected_wayback_tracks" value="{{ track.track.id }}">
-                    <label for="wayback-{{ track.track.id }}">
-                        {{ track.track.name }} - {{ track.track.artists[0].name }}
-                        <span class="small">(Added on: {{ track.added_at_formatted }})</span>
-                    </label>
-                    {% if track.track.preview_url %}
-                    <div class="audio-preview">
-                        <audio src="{{ track.track.preview_url }}"></audio>
-                        <button class="play-pause-btn">Play</button>
+            <div class="section">
+                <h2>Your Top Genres</h2>
+                <input type="text" class="search-input" data-category="genre" placeholder="Search genres...">
+                <button type="button" id="toggleAllGenres">Toggle All</button>
+                <span id="genresCount">0</span> selected
+                <div class="checkbox-list">
+                    {% for genre in top_genres %}
+                    <div class="checkbox-item genre-item">
+                        <input type="checkbox" id="genre-{{ loop.index }}" name="selected_genres" value="{{ genre.name }}">
+                        <label for="genre-{{ loop.index }}">{{ genre.name }}</label>
                     </div>
-                    {% endif %}
+                    {% endfor %}
                 </div>
-                {% endfor %}
             </div>
-        </div>
 
-        <div class="section">
-            <h2>Playlist Picks</h2>
-            <p>Discover tracks from your less frequented playlists:</p>
-            <input type="text" class="search-input" data-category="playlist_pick" placeholder="Search playlist picks...">
-            <button id="toggleAllPlaylistPicks">Toggle All</button>
-            <span id="playlist_picksCount">0</span> selected
-            <div class="track-list">
-                {% for pick in playlist_picks %}
-                <div class="checkbox-item playlist_pick-item">
-                    <input type="checkbox" id="playlist-pick-{{ pick.id }}" name="selected_playlist_picks" value="{{ pick.id }}">
-                    <label for="playlist-pick-{{ pick.id }}">
-                        {{ pick.name }} - {{ pick.artists|join(', ') }}
-                        <span class="small">(From playlist: {{ pick.playlist_name }})</span>
-                    </label>
-                    {% if pick.preview_url %}
-                    <div class="audio-preview">
-                        <audio src="{{ pick.preview_url }}"></audio>
-                        <button class="play-pause-btn">Play</button>
+            <div class="section">
+                <h2>Recently Played Tracks</h2>
+                <input type="text" class="search-input" data-category="recent_track" placeholder="Search recent tracks...">
+                <button type="button" id="toggleAllRecentTracks">Toggle All</button>
+                <span id="recent_tracksCount">0</span> selected
+                <div class="track-list">
+                    {% for item in recent_tracks %}
+                    <div class="checkbox-item recent_track-item">
+                        <input type="checkbox" id="recent-{{ item.track.id }}" name="selected_recent_tracks" value="{{ item.track.id }}">
+                        <label for="recent-{{ item.track.id }}">{{ item.track.name }} - {{ item.track.artists[0].name }}</label>
+                        {% if item.track.preview_url %}
+                        <div class="audio-preview">
+                            <audio src="{{ item.track.preview_url }}"></audio>
+                            <button type="button" class="play-pause-btn">Play</button>
+                        </div>
+                        {% endif %}
                     </div>
-                    {% endif %}
+                    {% endfor %}
                 </div>
-                {% endfor %}
             </div>
-        </div>
 
-        <div class="button-container">
-            <button id="confirmPreferencesBtn">Confirm Preferences</button>
-            <button id="dumpSessionDataBtn">Dump Session Data</button>
-            <button id="debugTrackPoolBtn">Debug Track Pool</button>
-        </div>
+            <div class="section wayback-machine">
+                <h2>The Way Back Machine</h2>
+                <p>Remember these forgotten gems from your library?</p>
+                <input type="text" class="search-input" data-category="wayback_track" placeholder="Search wayback tracks...">
+                <button type="button" id="toggleAllWaybackTracks">Toggle All</button>
+                <span id="wayback_tracksCount">0</span> selected
+                <div class="track-list">
+                    {% for track in wayback_tracks %}
+                    <div class="checkbox-item wayback_track-item">
+                        <input type="checkbox" id="wayback-{{ track.track.id }}" name="selected_wayback_tracks" value="{{ track.track.id }}">
+                        <label for="wayback-{{ track.track.id }}">
+                            {{ track.track.name }} - {{ track.track.artists[0].name }}
+                            <span class="small">(Added on: {{ track.added_at_formatted }})</span>
+                        </label>
+                        {% if track.track.preview_url %}
+                        <div class="audio-preview">
+                            <audio src="{{ track.track.preview_url }}"></audio>
+                            <button type="button" class="play-pause-btn">Play</button>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>Playlist Picks</h2>
+                <p>Discover tracks from your less frequented playlists:</p>
+                <input type="text" class="search-input" data-category="playlist_pick" placeholder="Search playlist picks...">
+                <button type="button" id="toggleAllPlaylistPicks">Toggle All</button>
+                <span id="playlist_picksCount">0</span> selected
+                <div class="track-list">
+                    {% for pick in playlist_picks %}
+                    <div class="checkbox-item playlist_pick-item">
+                        <input type="checkbox" id="playlist-pick-{{ pick.id }}" name="selected_playlist_picks" value="{{ pick.id }}">
+                        <label for="playlist-pick-{{ pick.id }}">
+                            {{ pick.name }} - {{ pick.artists|join(', ') }}
+                            <span class="small">(From playlist: {{ pick.playlist_name }})</span>
+                        </label>
+                        {% if pick.preview_url %}
+                        <div class="audio-preview">
+                            <audio src="{{ pick.preview_url }}"></audio>
+                            <button type="button" class="play-pause-btn">Play</button>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="button-container">
+                <button type="submit" id="confirmPreferencesBtn">Confirm Preferences</button>
+                <button type="button" id="dumpSessionDataBtn">Dump Session Data</button>
+                <button type="button" id="debugTrackPoolBtn">Debug Track Pool</button>
+            </div>
+        </form>
     </div>
 
-    <!-- Your existing script tag should go here -->
-</body>
-<script>
+    <script>
     // user_preferences.js
     
     document.addEventListener('DOMContentLoaded', function() {
@@ -230,36 +238,7 @@
     }
     
     function submitPreferences() {
-        // Gather all user preferences
-        const preferences = {
-            artists: getSelectedItems('selected_artists'),
-            genres: getSelectedItems('selected_genres'),
-            recentTracks: getSelectedItems('selected_recent_tracks'),
-            waybackTracks: getSelectedItems('selected_wayback_tracks'),
-            playlistPicks: getSelectedItems('selected_playlist_picks')
-        };
-    
-        // Send preferences to server
-        fetch('/confirm_preferences', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(preferences)
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                // Redirect to prepare track pool
-                window.location.href = '/prepare_track_pool';
-            } else {
-                alert('Error confirming preferences: ' + data.message);
-            }
-        })
-        .catch((error) => {
-            console.error('Error:', error);
-            alert('An error occurred while confirming preferences.');
-        });
+        document.getElementById('preferencesForm').submit();
     }
     
     function getSelectedItems(name) {
@@ -308,28 +287,28 @@
             countElement.textContent = checkboxes.length;
         }
     }
-    function debugTrackPool() {
-    console.log('Debug Track Pool button clicked'); // Add this line for debugging
-    fetch('/debug_track_pool', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert('Track pool data dumped successfully. Check the server logs for the file location.');
-        } else {
-            alert('Error dumping track pool data: ' + data.message);
-        }
-    })
-    .catch((error) => {
-        console.error('Error:', error);
-        alert('An error occurred while debugging track pool.');
-    });
 
-}
+    function debugTrackPool() {
+        console.log('Debug Track Pool button clicked');
+        fetch('/debug_track_pool', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Track pool data dumped successfully. Check the server logs for the file location.');
+            } else {
+                alert('Error dumping track pool data: ' + data.message);
+            }
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+            alert('An error occurred while debugging track pool.');
+        });
+    }
     
     // Add event listeners for each category
     ['artists', 'genres', 'recent_tracks', 'wayback_tracks', 'playlist_picks'].forEach(category => {
