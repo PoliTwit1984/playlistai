@@ -82,7 +82,7 @@
 <body>
     <div class="container">
         <h1>Your Spotify Insights</h1>
-        
+
         <div class="section current-preferences">
             <h2>Your Current Preferences</h2>
             <ul>
@@ -102,142 +102,293 @@
 
         <div class="section">
             <h2>Your Top Artists</h2>
-            <form id="artistForm">
-                <div class="checkbox-list">
-                    {% for artist in top_artists %}
-                    <div class="checkbox-item">
-                        <input type="checkbox" id="artist-{{ loop.index }}" name="selected_artists" value="{{ artist.name }}">
-                        <label for="artist-{{ loop.index }}">{{ artist.name }}</label>
-                    </div>
-                    {% endfor %}
+            <input type="text" class="search-input" data-category="artist" placeholder="Search artists...">
+            <button id="toggleAllArtists">Toggle All</button>
+            <span id="artistsCount">0</span> selected
+            <div class="checkbox-list">
+                {% for artist in top_artists %}
+                <div class="checkbox-item artist-item">
+                    <input type="checkbox" id="artist-{{ artist.id }}" name="selected_artists" value="{{ artist.id }}">
+                    <label for="artist-{{ artist.id }}">{{ artist.name }}</label>
                 </div>
-            </form>
+                {% endfor %}
+            </div>
         </div>
 
         <div class="section">
             <h2>Your Top Genres</h2>
-            <form id="genreForm">
-                <div class="checkbox-list">
-                    {% for genre in top_genres %}
-                    <div class="checkbox-item">
-                        <input type="checkbox" id="genre-{{ loop.index }}" name="selected_genres" value="{{ genre.name }}">
-                        <label for="genre-{{ loop.index }}">{{ genre.name }}</label>
-                    </div>
-                    {% endfor %}
+            <input type="text" class="search-input" data-category="genre" placeholder="Search genres...">
+            <button id="toggleAllGenres">Toggle All</button>
+            <span id="genresCount">0</span> selected
+            <div class="checkbox-list">
+                {% for genre in top_genres %}
+                <div class="checkbox-item genre-item">
+                    <input type="checkbox" id="genre-{{ loop.index }}" name="selected_genres" value="{{ genre.name }}">
+                    <label for="genre-{{ loop.index }}">{{ genre.name }}</label>
                 </div>
-            </form>
+                {% endfor %}
+            </div>
         </div>
 
         <div class="section">
             <h2>Recently Played Tracks</h2>
-            <form id="recentTracksForm">
-                <div class="track-list">
-                    {% for item in recent_tracks %}
-                    <div class="checkbox-item">
-                        <input type="checkbox" id="recent-{{ loop.index }}" name="selected_recent" value="{{ item.track.id }}">
-                        <label for="recent-{{ loop.index }}">
-                            {{ item.track.name }} - {{ item.track.artists[0].name }}
-                            {% if item.track.preview_url %}
-                            <audio controls>
-                                <source src="{{ item.track.preview_url }}" type="audio/mpeg">
-                                Your browser does not support the audio element.
-                            </audio>
-                            {% endif %}
-                        </label>
+            <input type="text" class="search-input" data-category="recent_track" placeholder="Search recent tracks...">
+            <button id="toggleAllRecentTracks">Toggle All</button>
+            <span id="recent_tracksCount">0</span> selected
+            <div class="track-list">
+                {% for item in recent_tracks %}
+                <div class="checkbox-item recent_track-item">
+                    <input type="checkbox" id="recent-{{ item.track.id }}" name="selected_recent_tracks" value="{{ item.track.id }}">
+                    <label for="recent-{{ item.track.id }}">{{ item.track.name }} - {{ item.track.artists[0].name }}</label>
+                    {% if item.track.preview_url %}
+                    <div class="audio-preview">
+                        <audio src="{{ item.track.preview_url }}"></audio>
+                        <button class="play-pause-btn">Play</button>
                     </div>
-                    {% endfor %}
+                    {% endif %}
                 </div>
-            </form>
+                {% endfor %}
+            </div>
         </div>
 
         <div class="section wayback-machine">
             <h2>The Way Back Machine</h2>
             <p>Remember these forgotten gems from your library?</p>
-            <form id="waybackForm">
-                <div class="track-list">
-                    {% for track in wayback_tracks %}
-                    <div class="checkbox-item">
-                        <input type="checkbox" id="wayback-{{ loop.index }}" name="selected_wayback" value="{{ track.track.id }}">
-                        <label for="wayback-{{ loop.index }}">
-                            {{ track.track.name }} - {{ track.track.artists[0].name }}
-                            <small>(Added on: {{ track.added_at_formatted }})</small>
-                            {% if track.track.preview_url %}
-                            <audio controls>
-                                <source src="{{ track.track.preview_url }}" type="audio/mpeg">
-                                Your browser does not support the audio element.
-                            </audio>
-                            {% endif %}
-                        </label>
+            <input type="text" class="search-input" data-category="wayback_track" placeholder="Search wayback tracks...">
+            <button id="toggleAllWaybackTracks">Toggle All</button>
+            <span id="wayback_tracksCount">0</span> selected
+            <div class="track-list">
+                {% for track in wayback_tracks %}
+                <div class="checkbox-item wayback_track-item">
+                    <input type="checkbox" id="wayback-{{ track.track.id }}" name="selected_wayback_tracks" value="{{ track.track.id }}">
+                    <label for="wayback-{{ track.track.id }}">
+                        {{ track.track.name }} - {{ track.track.artists[0].name }}
+                        <span class="small">(Added on: {{ track.added_at_formatted }})</span>
+                    </label>
+                    {% if track.track.preview_url %}
+                    <div class="audio-preview">
+                        <audio src="{{ track.track.preview_url }}"></audio>
+                        <button class="play-pause-btn">Play</button>
                     </div>
-                    {% endfor %}
+                    {% endif %}
                 </div>
-            </form>
+                {% endfor %}
+            </div>
         </div>
 
         <div class="section">
             <h2>Playlist Picks</h2>
             <p>Discover tracks from your less frequented playlists:</p>
-            <form id="playlistPicksForm">
-                <div class="track-list">
-                    {% for pick in playlist_picks %}
-                    <div class="checkbox-item">
-                        <input type="checkbox" id="playlist-pick-{{ loop.index }}" name="selected_playlist_picks" value="{{ pick.id }}">
-                        <label for="playlist-pick-{{ loop.index }}">
-                            {{ pick.name }} - {{ pick.artists|join(', ') }}
-                            <small>(From playlist: {{ pick.playlist_name }})</small>
-                            {% if pick.preview_url %}
-                            <audio controls>
-                                <source src="{{ pick.preview_url }}" type="audio/mpeg">
-                                Your browser does not support the audio element.
-                            </audio>
-                            {% endif %}
-                        </label>
+            <input type="text" class="search-input" data-category="playlist_pick" placeholder="Search playlist picks...">
+            <button id="toggleAllPlaylistPicks">Toggle All</button>
+            <span id="playlist_picksCount">0</span> selected
+            <div class="track-list">
+                {% for pick in playlist_picks %}
+                <div class="checkbox-item playlist_pick-item">
+                    <input type="checkbox" id="playlist-pick-{{ pick.id }}" name="selected_playlist_picks" value="{{ pick.id }}">
+                    <label for="playlist-pick-{{ pick.id }}">
+                        {{ pick.name }} - {{ pick.artists|join(', ') }}
+                        <span class="small">(From playlist: {{ pick.playlist_name }})</span>
+                    </label>
+                    {% if pick.preview_url %}
+                    <div class="audio-preview">
+                        <audio src="{{ pick.preview_url }}"></audio>
+                        <button class="play-pause-btn">Play</button>
                     </div>
-                    {% endfor %}
+                    {% endif %}
                 </div>
-            </form>
+                {% endfor %}
+            </div>
         </div>
 
-        <a href="#" class="btn" onclick="submitPreferences()">Confirm Preferences</a>
+        <div class="button-container">
+            <button id="confirmPreferencesBtn">Confirm Preferences</button>
+            <button id="dumpSessionDataBtn">Dump Session Data</button>
+            <button id="debugTrackPoolBtn">Debug Track Pool</button>
+        </div>
     </div>
-    <script>
-        function submitPreferences() {
-            const selectedArtists = Array.from(document.querySelectorAll('input[name="selected_artists"]:checked')).map(el => el.value);
-            const selectedGenres = Array.from(document.querySelectorAll('input[name="selected_genres"]:checked')).map(el => el.value);
-            const selectedRecentTracks = Array.from(document.querySelectorAll('input[name="selected_recent"]:checked')).map(el => el.value);
-            const selectedWaybackTracks = Array.from(document.querySelectorAll('input[name="selected_wayback"]:checked')).map(el => el.value);
-            const selectedPlaylistPicks = Array.from(document.querySelectorAll('input[name="selected_playlist_picks"]:checked')).map(el => el.value);
-            
-            const preferences = {
-                artists: selectedArtists,
-                genres: selectedGenres,
-                recentTracks: selectedRecentTracks,
-                waybackTracks: selectedWaybackTracks,
-                playlistPicks: selectedPlaylistPicks
-            };
+
+    <!-- Your existing script tag should go here -->
+</body>
+<script>
+    // user_preferences.js
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize any necessary UI components
+        initializeUI();
+    
+        // Add event listeners
+        document.getElementById('confirmPreferencesBtn').addEventListener('click', submitPreferences);
+        document.getElementById('dumpSessionDataBtn').addEventListener('click', dumpSessionData);
+        document.getElementById('debugTrackPoolBtn').addEventListener('click', debugTrackPool);
+    });
+    
+    function initializeUI() {
+        // Initialize any UI components, such as sliders or toggles
+        // For example, if you're using a library for range sliders:
+        // initializeRangeSliders();
+    }
+    
+    function submitPreferences() {
+        // Gather all user preferences
+        const preferences = {
+            artists: getSelectedItems('selected_artists'),
+            genres: getSelectedItems('selected_genres'),
+            recentTracks: getSelectedItems('selected_recent_tracks'),
+            waybackTracks: getSelectedItems('selected_wayback_tracks'),
+            playlistPicks: getSelectedItems('selected_playlist_picks')
+        };
+    
+        // Send preferences to server
+        fetch('/confirm_preferences', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(preferences)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Redirect to prepare track pool
+                window.location.href = '/prepare_track_pool';
+            } else {
+                alert('Error confirming preferences: ' + data.message);
+            }
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+            alert('An error occurred while confirming preferences.');
+        });
+    }
+    
+    function getSelectedItems(name) {
+        return Array.from(document.querySelectorAll(`input[name="${name}"]:checked`))
+                    .map(el => el.value);
+    }
+    
+    function dumpSessionData() {
+        fetch('/dump_session_data', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Session data dumped successfully. Check the server logs for the file location.');
+            } else {
+                alert('Error dumping session data: ' + data.message);
+            }
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+            alert('An error occurred while dumping session data.');
+        });
+    }
+    
+    // Function to toggle selection of all items in a category
+    function toggleAll(categoryName) {
+        const checkboxes = document.querySelectorAll(`input[name="selected_${categoryName}"]`);
+        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
         
-            console.log('Selected Preferences:', preferences);
-        
-            fetch('/confirm_preferences', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(preferences),
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    window.location.href = '/generate_playlist';
-                } else {
-                    alert('Error: ' + data.message);
-                }
-            })
-            .catch((error) => {
-                console.error('Error:', error);
-                alert('An error occurred. Please try again.');
-            });
+        checkboxes.forEach(cb => {
+            cb.checked = !allChecked;
+        });
+    
+        updateSelectedCount(categoryName);
+    }
+    
+    // Function to update the count of selected items for a category
+    function updateSelectedCount(categoryName) {
+        const checkboxes = document.querySelectorAll(`input[name="selected_${categoryName}"]:checked`);
+        const countElement = document.getElementById(`${categoryName}Count`);
+        if (countElement) {
+            countElement.textContent = checkboxes.length;
         }
-        </script>
+    }
+    function debugTrackPool() {
+    console.log('Debug Track Pool button clicked'); // Add this line for debugging
+    fetch('/debug_track_pool', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Track pool data dumped successfully. Check the server logs for the file location.');
+        } else {
+            alert('Error dumping track pool data: ' + data.message);
+        }
+    })
+    .catch((error) => {
+        console.error('Error:', error);
+        alert('An error occurred while debugging track pool.');
+    });
+
+}
+    
+    // Add event listeners for each category
+    ['artists', 'genres', 'recent_tracks', 'wayback_tracks', 'playlist_picks'].forEach(category => {
+        const checkboxes = document.querySelectorAll(`input[name="selected_${category}"]`);
+        checkboxes.forEach(cb => {
+            cb.addEventListener('change', () => updateSelectedCount(category));
+        });
+    
+        // Initialize counts
+        updateSelectedCount(category);
+    
+        // Add toggle all functionality
+        const toggleAllBtn = document.getElementById(`toggleAll${category.charAt(0).toUpperCase() + category.slice(1)}`);
+        if (toggleAllBtn) {
+            toggleAllBtn.addEventListener('click', () => toggleAll(category));
+        }
+    });
+    
+    // Function to play/pause audio preview
+    function toggleAudioPreview(audioElement, playBtn) {
+        if (audioElement.paused) {
+            audioElement.play();
+            playBtn.textContent = 'Pause';
+        } else {
+            audioElement.pause();
+            playBtn.textContent = 'Play';
+        }
+    }
+    
+    // Add event listeners for audio previews
+    document.querySelectorAll('.audio-preview').forEach(preview => {
+        const audioElement = preview.querySelector('audio');
+        const playBtn = preview.querySelector('.play-pause-btn');
+        
+        if (audioElement && playBtn) {
+            playBtn.addEventListener('click', () => toggleAudioPreview(audioElement, playBtn));
+        }
+    });
+    
+    // Function to filter items based on search input
+    function filterItems(inputElement, itemSelector) {
+        const filter = inputElement.value.toLowerCase();
+        const items = document.querySelectorAll(itemSelector);
+    
+        items.forEach(item => {
+            const text = item.textContent.toLowerCase();
+            if (text.includes(filter)) {
+                item.style.display = "";
+            } else {
+                item.style.display = "none";
+            }
+        });
+    }
+    
+    // Add event listeners for search inputs
+    document.querySelectorAll('.search-input').forEach(input => {
+        const category = input.dataset.category;
+        input.addEventListener('keyup', () => filterItems(input, `.${category}-item`));
+    });
+    </script>
 </body>
 </html>

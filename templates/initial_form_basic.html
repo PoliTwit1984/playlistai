@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simplified MoodWave Form</title>
+</head>
+<body>
+    <h1>Simplified MoodWave Form</h1>
+    <form method="POST" action="{{ url_for('initial_form') }}">
+        {{ form.hidden_tag() }}
+        <div>
+            <label for="name">Name:</label>
+            {{ form.name() }}
+        </div>
+        <div>
+            <label for="mood">Current Mood (0-100):</label>
+            {{ form.mood(type="range", min="0", max="100", value="50") }}
+        </div>
+        <div>
+            <label for="desired_mood">Desired Mood (0-100):</label>
+            {{ form.desired_mood(type="range", min="0", max="100", value="50") }}
+        </div>
+        <div>
+            <label for="activity">Activity:</label>
+            {{ form.activity() }}
+        </div>
+        <div>
+            <label for="energy_level">Energy Level (0-100):</label>
+            {{ form.energy_level(type="range", min="0", max="100", value="50") }}
+        </div>
+        <div>
+            <label for="time_of_day">Time of Day:</label>
+            {{ form.time_of_day() }}
+        </div>
+        <div>
+            <label for="duration">Duration (minutes):</label>
+            {{ form.duration() }}
+        </div>
+        <div>
+            <label for="discovery_level">Discovery Level (0-100):</label>
+            {{ form.discovery_level(type="range", min="0", max="100", value="50") }}
+        </div>
+        <div>
+            <label for="favorite_artists">Favorite Artists:</label>
+            {{ form.favorite_artists() }}
+        </div>
+        <div>
+            <label for="favorite_genres">Favorite Genres:</label>
+            {{ form.favorite_genres() }}
+        </div>
+        <div>
+            <label for="playlist_description">Playlist Description:</label>
+            {{ form.playlist_description() }}
+        </div>
+        <div>
+            {{ form.submit() }}
+        </div>
+    </form>
+</body>
+</html>
