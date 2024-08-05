@@ -8,7 +8,8 @@
     <p>{{ ai_playlist_description }}</p>
 
     <h3>Recommended Tracks</h3>
-    <ul>  # TODO: UL doesn't support none LI childrenlabels: priority: high, area: ui/ux, status: needs review 
+    <ul>  # TODO: UL doesn't support none LI children 
+          # labels: priority: high, area: ui/ux, status: needs review 
     {% for track in recommended_tracks %}
         <li>{{ track.name }} by {{ track.artist }}</li>
     {% endfor %}
